@@ -4,6 +4,7 @@ from src.utilizadores.router import router as utilizadores_router
 from src.perfis.router import router as perfis_router
 from src.auditoria.router import router as auditoria_router
 from src.clinica.router import router as clinica_router
+from src.stock.router import router as stock_router
 
 app = FastAPI(
     title="Clínica Dentária API",
@@ -40,6 +41,7 @@ app.include_router(utilizadores_router, prefix="/utilizadores",tags=["utilizador
 app.include_router(perfis_router, prefix="/perfis", tags=["perfis"])
 app.include_router(clinica_router, prefix="/clinica", tags=["clinica"])
 app.include_router(auditoria_router, prefix="/auditoria", tags=["auditoria"])
+app.include_router(stock_router, prefix="/stock", tags=["stock"])
 
 
 

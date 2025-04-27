@@ -16,6 +16,7 @@ from src.utilizadores import models as utilizadores_models
 from src.perfis import models as perfis_models  
 from src.auditoria import models as auditoria_models  
 from src.clinica import models as clinica_models
+from src.stock import models as stock_models
 
 # Carrega a config do .ini
 config = context.config

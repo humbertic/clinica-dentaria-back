@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from src.database import Base
 
@@ -19,9 +19,13 @@ class Clinica(Base):
 class ClinicaConfiguracao(Base):
     __tablename__ = "ClinicaConfiguracao"
     id = Column(Integer, primary_key=True)
-    clinica_id = Column(Integer, ForeignKey("Clinica.id"))
+    clinica_id = Column(Integer, ForeignKey("Clinica.id"), nullable=True)
     chave = Column(String(100), nullable=False)
     valor = Column(Text, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('clinica_id', 'chave', name='uix_clinica_id_chave'),
+    )
 
     clinica = relationship("Clinica", back_populates="configuracoes")
 

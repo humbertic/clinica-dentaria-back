@@ -9,6 +9,16 @@ def criar_clinica(db: Session, dados: schemas.ClinicaCreate, criado_por_id: int)
     db.add(clinica)
     db.commit()
     db.refresh(clinica)
+    # Copy global configurations to new clinic
+    global_configs = db.query(models.ClinicaConfiguracao).filter_by(clinica_id=None).all()
+    for config in global_configs:
+        new_config = models.ClinicaConfiguracao(
+            clinica_id=clinica.id,
+            chave=config.chave,
+            valor=config.valor,
+        )
+        db.add(new_config)
+    db.commit()
     registrar_auditoria(
         db, criado_por_id, "Criação", "Clinica", clinica.id, f"Clínica '{clinica.nome}' criada."
     )
@@ -28,10 +38,30 @@ def atualizar_clinica(db: Session, clinica_id: int, dados: schemas.ClinicaCreate
     return clinica
 
 def criar_configuracao(db: Session, dados: schemas.ClinicaConfiguracaoCreate, user_id: int):
+    if dados.clinica_id is None:
+        exists = db.query(models.ClinicaConfiguracao).filter_by(
+            clinica_id=None, chave=dados.chave
+        ).first()
+    else:
+        exists = db.query(models.ClinicaConfiguracao).filter_by(
+            clinica_id=dados.clinica_id, chave=dados.chave
+        ).first()
+    if exists:
+        raise ValueError("Configuração com essa chave já existe.")
     config = models.ClinicaConfiguracao(**dados.dict())
     db.add(config)
     db.commit()
     db.refresh(config)
+    if config.clinica_id is None:
+        clinics = db.query(models.Clinica).all()
+        for clinic in clinics:
+            clinic_config = models.ClinicaConfiguracao(
+                clinica_id=clinic.id,
+                chave=config.chave,
+                valor=config.valor,
+            )
+            db.add(clinic_config)
+        db.commit()
     registrar_auditoria(
         db, user_id, "Criação", "ClinicaConfiguracao", config.id, f"Configuração '{config.chave}' criada."
     )
