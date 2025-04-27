@@ -32,11 +32,11 @@ class ClinicaConfiguracaoBase(BaseModel):
     valor: str
 
 class ClinicaConfiguracaoCreate(ClinicaConfiguracaoBase):
-    clinica_id: int
-
+    clinica_id: int | None = None
+    
 class ClinicaConfiguracaoResponse(ClinicaConfiguracaoBase):
     id: int
-    clinica_id: int
+    clinica_id: int | None = None
 
     class Config:
         from_attributes = True
