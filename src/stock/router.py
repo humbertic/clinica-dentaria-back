@@ -51,15 +51,15 @@ def obter_item_por_id(
 @router.put("/items/{item_id}", response_model=schemas.ItemStockResponse)
 def atualizar_item(
     item_id: int,
-    item: schemas.ItemStockCreate,
+    item: schemas.ItemStockUpdate,
     db: Session = Depends(get_db),
     user = Depends(get_current_user)
 ):
     check_permission(user, ["master_admin", "gerente"])
-    db_item = service.atualizar_item_stock(db, item_id, item)
+    db_item = service.atualizar_item_stock(db, item_id, item, user.id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
-    return db_item
+    return service.obter_item_stock_por_id(db, item_id)
 
 # --------- MOVIMENTO STOCK ---------
 @router.post("/movimentos", response_model=schemas.MovimentoStockResponse)
