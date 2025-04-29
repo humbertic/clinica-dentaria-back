@@ -62,7 +62,8 @@ class MovimentoStockBase(BaseModel):
     quantidade: int
     justificacao: Optional[str] = None
     lote: Optional[str] = None         
-    validade: Optional[date] = None    
+    validade: Optional[date] = None  
+    destino_id: Optional[int] = None  
 
 class MovimentoStockCreate(MovimentoStockBase):
     utilizador_id: int

@@ -102,10 +102,12 @@ def criar_movimento_stock(db: Session, movimento: schemas.MovimentoStockCreate):
             item_id=movimento.item_id,
             quantidade=movimento.quantidade
         )
+    elif movimento.tipo_movimento == "transferencia":
+        transferencia(db, movimento, item)
     else:
         raise ValueError("Tipo de movimento inválido.")
 
-    mov_dict = movimento.dict(exclude={"lote", "validade"})
+    mov_dict = movimento.dict(exclude={"lote", "validade","destino_id"})
     db_mov = models.MovimentoStock(**mov_dict)
     db.add(db_mov)
     db.commit()
@@ -157,6 +159,7 @@ def listar_item_filial(db: Session, item_id: int):
 
 # --------- LOTES ---------
 def entrada_lote(db: Session, item_id: int, lote: str, validade: date, quantidade: int):
+    lote = lote.upper()
     item_lote = db.query(models.ItemLote).filter_by(item_id=item_id, lote=lote, validade=validade).first()
     if item_lote:
         item_lote.quantidade += quantidade
@@ -185,6 +188,83 @@ def saida_lote(db: Session, item_id: int, quantidade: int):
     if restante > 0:
         raise ValueError("Estoque insuficiente nos lotes para a saída solicitada.")
     return True
+
+def transferencia(db: Session, movimento: schemas.MovimentoStockCreate, item):
+    if not movimento.destino_id:
+        raise ValueError("Destino da transferência não informado.")
+    lotes_origem = db.query(models.ItemLote).filter_by(item_id=movimento.item_id).order_by(models.ItemLote.validade).all()
+    restante = movimento.quantidade
+    lotes_transferidos = []
+    for lote in lotes_origem:
+        if restante <= 0:
+            break
+        transferir = min(lote.quantidade, restante)
+        lote.quantidade -= transferir
+        lote_nome_upper = lote.lote.upper()
+        lote.lote = lote_nome_upper
+        lotes_transferidos.append((lote_nome_upper, lote.validade, transferir))
+        # Registra movimento de saída para cada lote
+        registrar_movimento_saida(db, item.id, transferir, movimento.utilizador_id, movimento.justificacao or "Transferência", lote.lote, lote.validade)
+        restante -= transferir
+        db.commit()
+        db.refresh(lote)
+    if restante > 0:
+        raise ValueError("Estoque insuficiente para transferência.")
+
+    item_destino = db.query(models.ItemStock).filter_by(nome=item.nome, clinica_id=movimento.destino_id).first()
+    if not item_destino:
+        item_destino = models.ItemStock(
+            nome=item.nome,
+            descricao=item.descricao,
+            quantidade_minima=item.quantidade_minima,
+            tipo_medida=item.tipo_medida,
+            fornecedor=item.fornecedor,
+            ativo=item.ativo,
+            clinica_id=movimento.destino_id
+        )
+        db.add(item_destino)
+        db.commit()
+        db.refresh(item_destino)
+
+    for lote_nome, validade, qtd in lotes_transferidos:
+        lote_nome = lote_nome.upper()
+        lote_destino = db.query(models.ItemLote).filter_by(item_id=item_destino.id, lote=lote_nome, validade=validade).first()
+        if lote_destino:
+            lote_destino.quantidade += qtd
+        else:
+            lote_destino = models.ItemLote(item_id=item_destino.id, lote=lote_nome, validade=validade, quantidade=qtd)
+            db.add(lote_destino)
+        db.commit()
+        db.refresh(lote_destino)
+        # Registra movimento de entrada para cada lote
+        registrar_movimento_entrada(db, item_destino.id, qtd, movimento.utilizador_id, movimento.justificacao or "Transferência", lote_nome, validade)
+        
+def registrar_movimento_entrada(db: Session, item_id: int, quantidade: int, user_id: int, justificacao: str, lote: str, validade: date):
+    mov_entrada = models.MovimentoStock(
+        item_id=item_id,
+        tipo_movimento="entrada",
+        quantidade=quantidade,
+        utilizador_id=user_id,
+        justificacao=justificacao,
+       
+    )
+    db.add(mov_entrada)
+    db.commit()
+    db.refresh(mov_entrada)
+    return mov_entrada
+
+def registrar_movimento_saida(db: Session, item_id: int, quantidade: int, user_id: int, justificacao: str, lote: str, validade: date):
+    mov_saida = models.MovimentoStock(
+        item_id=item_id,
+        tipo_movimento="saida",
+        quantidade=quantidade,
+        utilizador_id=user_id,
+        justificacao=justificacao,
+    )
+    db.add(mov_saida)
+    db.commit()
+    db.refresh(mov_saida)
+    return mov_saida
 
 def get_proximo_lote(db: Session, item_id: int):
     return db.query(models.ItemLote).filter_by(item_id=item_id).order_by(models.ItemLote.validade).first()
