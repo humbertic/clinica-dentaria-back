@@ -1,0 +1,28 @@
+### Roadmap “backend-only” — MVP da agenda de consultas  
+*(ordem sugerida de implementação; tudo em FastAPI, sem tocar ainda no frontend)*
+
+| Nº | Tarefa | Descrição resumida | Tabelas / módulos |
+|----|--------|--------------------|-------------------|
+| **0** | **Preparação** | - Criar pacotes vazios: `pacientes`, `doutores`, `salas`, `consultas`, `ficha_clinica`, `planos_tratamento`, `seguros`. <br>- Acrescentar import dos novos `models` ao `alembic/env.py`. | — |
+| **1** | CRUD **Pacientes** | `Paciente` models + endpoints: criar, listar (paginação), atualizar, autocomplete (`/pacientes/search?q=`). | `pacientes` |
+| **2** | CRUD **Doutores** | Registar doutor, especialidade, **horário base** (ex.: 09-17 h seg-sex). | `doutores` |
+| **3** | CRUD **Salas** | `Sala(id, nome, ativa)`, opcional “capacidade”. | `salas` |
+| **4** | **Modelo de Disponibilidade** | - tabela `AgendaBloqueio(id, doutor_id, sala_id, data, hora_inicio, hora_fim)` <br>- índice único `(doutor_id, data_hora)` e `(sala_id, data_hora)`. | `consultas` |
+| **5** | **Endpoint vagas** | `GET /consultas/vagas?doutor_id=&data=YYYY-MM-DD` devolve slots livres de 30 min dentro do horário da clínica (consulta horários + bloqueios). | `consultas.service.verificar_vagas` |
+| **6** | **Proposta de Consulta** | `POST /consultas/proposta` com `{paciente_id, doutor_id, sala_id, data_hora}`:<br>- valida que slot está livre (transação). <br>- cria `Consulta` estado **“proposta”**. | `consultas` |
+| **7** | **Aceitar data** | `PATCH /consultas/{id}/aceitar` muda estado para **“agendada”** e grava bloqueios definitivos (doutor + sala). | `consultas` |
+| **8** | Estados extra & regras | Enum `estado` = proposta · agendada · cancelada · concluída · faltou. <br>Valida horário de funcionamento; impede overlapps. | — |
+| **9** | **Cron de lembretes** | APScheduler job diário: envia e-mail/SMS 24 h antes para consultas em `estado='agendada'`. | `consultas`, utilitário `notifications` |
+| **10** | **Auditoria** | Em cada mudança de estado grava em `HistoricoOperacao` (já existente). | `auditoria` |
+| **11** | **Teste de concorrência** | Unit test: duas threads tentam reservar mesmo slot → uma falha por `IntegrityError`. | `tests/consultas` |
+| **12** | **Seguros (mínimo)** | Endpoint `POST /seguros/credencial` + job de verificação 24 h antes (alterar estado se inválida). | `seguros` |
+| **13** | **Ficha Clínica auto-criação** | Ao concluir consulta, se paciente não tiver `FichaClinica`, criar vazia. | `ficha_clinica` |
+| **14** | **Plano de Tratamento vínculo** | Endpoint para associar consulta a plano (`/planos/{id}/add_consulta`). | `planos_tratamento` |
+
+> **Observações rápidas**  
+> • Buffer entre consultas: definir constante `BUFFER_MINUTES` (0 – 10).  
+> • Horário da clínica:  guardar em `ClinicaConfiguracao` (`abertura=08:00`, `fecho=20:00`).  
+> • Todos os `POST/PUT` protegidos por permissões (`recepcionista` ou superiores).  
+> • Reminder job e verificação de seguros podem partilhar o mesmo scheduler.
+
+Com esta lista tens o esqueleto completo do backend de agendamento sem expor UI. Quando quiseres começar um item (ex.: tarefa 5 “Endpoint vagas”), diz-me que envio modelo, schemas e teste unitário base.

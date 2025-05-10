@@ -1,0 +1,183 @@
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    func,
+)
+from sqlalchemy.orm import relationship
+from src.database import Base
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Date,
+    DateTime,
+    ForeignKey,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+
+
+# ---------- PACIENTE ----------
+class Paciente(Base):
+    __tablename__ = "Paciente"
+
+    id = Column(Integer, primary_key=True)
+    clinica_id = Column(Integer, ForeignKey("Clinica.id"), nullable=False)
+    nome = Column(String(100), nullable=False)
+    nif = Column(String(20), unique=True, nullable=True)
+    data_nascimento = Column(Date)
+    sexo = Column(String(10))                  # M / F / Outro
+    nacionalidade = Column(String(50))           # nacionalidade
+    tipo_documento = Column(String(50))          # tipo de documento (ex: CC, passaporte, etc.)
+    numero_documento = Column(String(50), unique=True)  # número do documento
+    validade_documento = Column(Date, nullable=True) # validade do documento
+    telefone = Column(String(20), unique=True)
+    email = Column(String(100), unique=True)
+    pais_residencia = Column(String(50))            # país de residência
+    morada = Column(String(200))                    # morada
+
+    # — Relacionamentos
+    fichas = relationship(
+        "FichaClinica",
+        back_populates="paciente",
+        cascade="all, delete-orphan",
+    )
+    planos = relationship(
+        "PlanoTratamento",
+        back_populates="paciente",
+        cascade="all, delete-orphan",
+    )
+    
+    clinica = relationship(
+        "Clinica",
+        backref="pacientes",
+        lazy="joined",           # joined-load por omissão
+    )
+    # consultas = relationship("Consulta", back_populates="paciente")  # ← adicionar depois
+
+    def __repr__(self) -> str:  # type: ignore[override]
+        return f"<Paciente {self.id} - {self.nome}>"
+
+# src/pacientes/models.py
+
+
+
+class FichaClinica(Base):
+    __tablename__ = "FichaClinica"
+
+    id = Column(Integer, primary_key=True)
+    paciente_id = Column(Integer, ForeignKey("Paciente.id"), nullable=False)
+    data_criacao = Column(DateTime, server_default=func.now())
+
+    # --- Dados do cabeçalho do questionário ---
+    estado_civil        = Column(String(50),  nullable=True)
+    profissao           = Column(String(100), nullable=True)
+    endereco            = Column(Text,        nullable=True)
+    telefone            = Column(String(20),  nullable=True)
+    local_trabalho      = Column(String(100), nullable=True)
+    telefone_trabalho   = Column(String(20),  nullable=True)
+    tipo_beneficiario   = Column(String(50),  nullable=True)
+    numero_beneficiario = Column(String(50),  nullable=True)
+    recomendado_por     = Column(String(100), nullable=True)
+    data_questionario   = Column(Date,        nullable=True)
+
+    # --- Queixa principal ---
+    queixa_principal    = Column(Text,        nullable=True)
+
+    # --- História Médica e Odontológica (sim/não + detalhes em JSON) ---
+    historia_medica     = Column(
+        JSONB,
+        nullable=True,
+        comment="Respostas às perguntas de História Médica e Odontológica"
+    )
+
+    # --- Exame Clínico (Extra/Intra bucal) ---
+    exame_clinico       = Column(Text, nullable=True)
+
+    # --- Plano Geral de Tratamento (mapa dentário, anotações por dente em JSON) ---
+    plano_geral         = Column(
+        JSONB,
+        nullable=True,
+        comment="Mapa dentário e anotações por dente"
+    )
+
+    # --- Observações finais livres ---
+    observacoes_finais  = Column(Text, nullable=True)
+
+    # --- Auditoria: quem criou e actualizou ---
+    responsavel_criacao_id    = Column(Integer, ForeignKey("Utilizador.id"), nullable=False)
+    responsavel_atualizacao_id = Column(Integer, ForeignKey("Utilizador.id"), nullable=True)
+    data_atualizacao          = Column(DateTime, onupdate=func.now())
+
+    # --- Relacionamentos ---
+    paciente = relationship("Paciente", back_populates="fichas")
+    anotacoes = relationship(
+        "AnotacaoClinica",
+        back_populates="ficha",
+        cascade="all, delete-orphan",
+    )
+    ficheiros = relationship(
+        "FicheiroClinico",
+        back_populates="ficha",
+        cascade="all, delete-orphan",
+    )
+
+
+# ---------- ANOTAÇÃO CLÍNICA ----------
+class AnotacaoClinica(Base):
+    __tablename__ = "AnotacaoClinica"
+
+    id = Column(Integer, primary_key=True)
+    ficha_id = Column(Integer, ForeignKey("FichaClinica.id"))
+    # consulta_id = Column(Integer, ForeignKey("Consulta.id"), nullable=True)   # ← adicionar depois
+    texto = Column(Text, nullable=False)
+    data = Column(DateTime, server_default=func.now())
+
+    ficha = relationship("FichaClinica", back_populates="anotacoes")
+
+# ---------- FICHEIRO CLÍNICO ----------
+class FicheiroClinico(Base):
+    __tablename__ = "FicheiroClinico"
+
+    id = Column(Integer, primary_key=True)
+    ficha_id = Column(Integer, ForeignKey("FichaClinica.id"))
+    # consulta_id = Column(Integer, ForeignKey("Consulta.id"), nullable=True)   # ← adicionar depois
+    tipo = Column(String(50))                         # radiografia, pdf, imagem, etc.
+    caminho_ficheiro = Column(Text)
+    data_upload = Column(DateTime, server_default=func.now())
+
+    ficha = relationship("FichaClinica", back_populates="ficheiros")
+
+# ---------- PLANO DE TRATAMENTO ----------
+class PlanoTratamento(Base):
+    __tablename__ = "PlanoTratamento"
+
+    id = Column(Integer, primary_key=True)
+    paciente_id = Column(Integer, ForeignKey("Paciente.id"))
+    descricao = Column(Text)
+    estado = Column(String(50))                       # em_curso / concluido_parcial / concluido_total
+
+    paciente = relationship("Paciente", back_populates="planos")
+    consultas = relationship(
+        "ConsultaPlanoTratamento",
+        back_populates="plano",
+        cascade="all, delete-orphan",
+    )
+
+# ---------- LIGAÇÃO CONSULTA <-> PLANO ----------
+class ConsultaPlanoTratamento(Base):
+    __tablename__ = "ConsultaPlanoTratamento"
+
+    # consulta_id = Column(Integer, ForeignKey("Consulta.id"), primary_key=True)  # ← adicionar depois
+    plano_id = Column(Integer, ForeignKey("PlanoTratamento.id"), primary_key=True)
+
+    plano = relationship("PlanoTratamento", back_populates="consultas")
+    # consulta relationship será adicionada quando o modelo Consulta existir

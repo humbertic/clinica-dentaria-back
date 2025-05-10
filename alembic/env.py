@@ -17,6 +17,11 @@ from src.perfis import models as perfis_models
 from src.auditoria import models as auditoria_models  
 from src.clinica import models as clinica_models
 from src.stock import models as stock_models
+from src.pacientes import models as pacientes_models
+from src.categoria import models as categoria_models
+from src.entidades import models as entidades_models
+from src.artigos import models as artigos_models
+from src.precos import models as precos_models
 
 # Carrega a config do .ini
 config = context.config
