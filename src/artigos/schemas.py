@@ -1,5 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from src.categoria.schemas import CategoriaResponse
+from src.precos.schemas import PrecoResponse
 
 class ArtigoBase(BaseModel):
     codigo: str
@@ -14,8 +16,12 @@ class ArtigoUpdate(BaseModel):
     descricao: Optional[str]
     categoria_id: Optional[int]
 
-class ArtigoResponse(ArtigoBase):
+class ArtigoResponse(BaseModel):
     id: int
+    codigo: str
+    descricao: str
+    categoria: CategoriaResponse
+    precos: List[PrecoResponse] = []
 
     class Config:
         orm_mode = True

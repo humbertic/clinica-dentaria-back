@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from src.artigos.models import ArtigoMedico
 from src.artigos.schemas import ArtigoCreate, ArtigoUpdate
 from src.auditoria.utils import registrar_auditoria
+from sqlalchemy.orm import joinedload
 
 
 def criar_artigo(db: Session, dados: ArtigoCreate, criado_por_id: int) -> ArtigoMedico:
@@ -21,8 +22,14 @@ def criar_artigo(db: Session, dados: ArtigoCreate, criado_por_id: int) -> Artigo
 
 
 def listar_artigos(db: Session):
-    return db.query(ArtigoMedico).order_by(ArtigoMedico.id).all()
-
+    return (
+        db.query(ArtigoMedico)
+        .options(
+            joinedload(ArtigoMedico.categoria),
+        )
+        .order_by(ArtigoMedico.id)
+        .all()
+    )
 
 def obter_artigo_por_id(db: Session, artigo_id: int):
     return db.query(ArtigoMedico).filter(ArtigoMedico.id == artigo_id).first()

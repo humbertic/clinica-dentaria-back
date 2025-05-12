@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 
+
 class CategoriaBase(BaseModel):
     slug: str
     nome: str
