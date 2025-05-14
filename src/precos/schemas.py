@@ -14,7 +14,27 @@ class PrecoCreate(PrecoBase):
 class PrecoUpdate(BaseModel):
     valor_entidade: Decimal
     valor_paciente: Decimal
+    
+class EntidadeResponse(BaseModel):
+    id: int
+    nome: str
+    
+    class Config:
+        orm_mode = True
+        
+        
+class ArtigoResponse(BaseModel):
+    id: int
+    descricao: str
+    
+    class Config:
+        orm_mode = True
 
-class PrecoResponse(PrecoBase):
+class PrecoResponse(BaseModel):
+    valor_entidade: Decimal
+    valor_paciente: Decimal
+    artigo: ArtigoResponse
+    entidade: EntidadeResponse
+    
     class Config:
         orm_mode = True

@@ -51,7 +51,7 @@ def atualizar_preco(
         atualizado_por,
         "Atualização",
         "Preço",
-        f"{artigo_id},{entidade_id}",
+        artigo_id,
         f"Preço para artigo {artigo_id} e entidade {entidade_id} atualizado para {preco.valor_entidade}."
     )
     return preco
@@ -73,7 +73,7 @@ def remover_preco(
         removido_por,
         "Remoção",
         "Preço",
-        f"{artigo_id},{entidade_id}",
+        artigo_id,
         f"Preço para artigo {artigo_id} e entidade {entidade_id} removido."
     )
     return True
