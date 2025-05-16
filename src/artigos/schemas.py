@@ -7,14 +7,18 @@ class ArtigoBase(BaseModel):
     codigo: str
     descricao: str
     categoria_id: int
+    requer_dente: bool = False
+    requer_face: bool = False
 
 class ArtigoCreate(ArtigoBase):
     pass
 
 class ArtigoUpdate(BaseModel):
-    codigo: Optional[str]
-    descricao: Optional[str]
-    categoria_id: Optional[int]
+    codigo: Optional[str] = None
+    descricao: Optional[str] = None
+    categoria_id: Optional[int] = None
+    requer_dente: Optional[bool] = None
+    requer_face: Optional[bool] = None
 
 class ArtigoResponse(BaseModel):
     id: int
@@ -22,6 +26,8 @@ class ArtigoResponse(BaseModel):
     descricao: str
     categoria: CategoriaResponse
     precos: List[PrecoResponse] = []
+    requer_dente: bool
+    requer_face: bool
 
     class Config:
         orm_mode = True

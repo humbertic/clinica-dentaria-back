@@ -11,6 +11,9 @@ from src.entidades.router import router as entidades_router
 from src.artigos.router import router as artigos_router
 from src.precos.router import router as precos_router
 
+
+
+
 app = FastAPI(
     title="Clínica Dentária API",
     description="API para gestão de utilizadores, perfis e autenticação da clínica dentária.",
