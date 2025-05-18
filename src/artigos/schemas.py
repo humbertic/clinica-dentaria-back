@@ -9,6 +9,7 @@ class ArtigoBase(BaseModel):
     categoria_id: int
     requer_dente: bool = False
     requer_face: bool = False
+    face_count: Optional[int] = None
 
 class ArtigoCreate(ArtigoBase):
     pass
@@ -19,6 +20,7 @@ class ArtigoUpdate(BaseModel):
     categoria_id: Optional[int] = None
     requer_dente: Optional[bool] = None
     requer_face: Optional[bool] = None
+    face_count: Optional[int] = None
 
 class ArtigoResponse(BaseModel):
     id: int
@@ -28,6 +30,7 @@ class ArtigoResponse(BaseModel):
     precos: List[PrecoResponse] = []
     requer_dente: bool
     requer_face: bool
+    face_count: Optional[int] = None
 
     class Config:
         orm_mode = True
@@ -37,6 +40,7 @@ class ArtigoMinimal(BaseModel):
     id: int
     codigo: str
     descricao: str
+    face_count: Optional[int] = None
     
     class Config:
         orm_mode = True

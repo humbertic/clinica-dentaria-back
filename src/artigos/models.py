@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, Boolean
+from sqlalchemy import Column, Integer, SmallInteger, String, ForeignKey, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship
 from src.database import Base
 
@@ -16,6 +16,7 @@ class ArtigoMedico(Base):
     categoria_id = Column(Integer, ForeignKey("Categorias.id"), nullable=False)
     requer_dente = Column(Boolean, nullable=False, default=False)
     requer_face  = Column(Boolean, nullable=False, default=False) 
+    face_count   = Column(SmallInteger, nullable=True)
     
     precos = relationship(
         "Preco",               

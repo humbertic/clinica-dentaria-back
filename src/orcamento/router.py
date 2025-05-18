@@ -11,6 +11,7 @@ from src.orcamento.schemas import (
     OrcamentoRead,
     OrcamentoItemCreate,
     OrcamentoItemRead,
+    OrcamentoUpdate,
     OrcamentoUpdateEstado,
     EstadoOrc
 )
@@ -121,6 +122,20 @@ def mudar_estado(
     """
     return svc.set_estado(db, orc_id, body.estado)
 
+@router.put("/{orcamento_id}", response_model=OrcamentoRead)
+def atualizar_orcamento_endpoint(
+    orcamento_id: int, 
+    dados: OrcamentoUpdate, 
+    db: Session = Depends(get_db)
+):
+    """
+    Atualiza um orçamento existente.
+    
+    Regras:
+    - Entidade só pode ser alterada se não houver itens
+    - Apenas orçamentos em estado 'rascunho' podem ser alterados
+    """
+    return svc.atualizar_orcamento(db, orcamento_id, dados)
 
 # ─────────────────────────────────────────────────────────────
 #   Itens do orçamento

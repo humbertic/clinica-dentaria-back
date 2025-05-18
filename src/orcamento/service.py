@@ -12,6 +12,7 @@ from src.orcamento.schemas import (
     OrcamentoItemCreate,
     OrcamentoItemRead,
     EstadoOrc,
+    OrcamentoUpdate,
 )
 from src.orcamento.models import Orcamento, OrcamentoItem
 from src.pacientes.models import Paciente
@@ -189,6 +190,7 @@ def add_item(db: Session, orc_id: int, item_in: OrcamentoItemCreate) -> Orcament
     )
     db.add(item)
     db.flush()
+    db.refresh(orc)
     _recalc_totais(orc)
     db.commit()
     db.refresh(item)
@@ -219,6 +221,41 @@ def set_estado(db: Session, orc_id: int, novo_estado: EstadoOrc) -> Orcamento:
         raise HTTPException(400, "Não é possível aprovar orçamento sem itens")
 
     orc.estado = novo_estado
+    db.commit()
+    db.refresh(orc)
+    return orc
+
+
+def atualizar_orcamento(db: Session, orc_id: int, dados: OrcamentoUpdate) -> Orcamento:
+    """Atualiza dados de um orçamento. Regras especiais aplicadas para cada campo."""
+    orc = get_orcamento(db, orc_id)
+    
+    # Verifica estado - só pode editar rascunhos
+    if orc.estado != EstadoOrc.rascunho:
+        raise HTTPException(400, "Só é possível editar orçamentos em rascunho")
+    
+    # Validação para alteração de entidade
+    if dados.entidade_id is not None and dados.entidade_id != orc.entidade_id:
+        # Verifica se tem itens
+        if orc.itens:
+            raise HTTPException(
+                status_code=400,
+                detail="Não é possível alterar a entidade de um orçamento que já possui itens"
+            )
+        
+        # Verifica se a entidade existe
+        if not db.get(Entidade, dados.entidade_id):
+            raise HTTPException(404, "Entidade não encontrada")
+            
+        orc.entidade_id = dados.entidade_id
+    
+    # Campos que podem ser atualizados sempre
+    if dados.data is not None:
+        orc.data = dados.data
+    
+    if dados.observacoes is not None:
+        orc.observacoes = dados.observacoes
+    
     db.commit()
     db.refresh(orc)
     return orc

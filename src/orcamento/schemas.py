@@ -31,7 +31,8 @@ class OrcamentoItemBase(BaseModel):
 
     preco_entidade: Decimal = Field(..., max_digits=10, decimal_places=2)
     preco_paciente: Decimal = Field(..., max_digits=10, decimal_places=2)
-
+    observacoes: Optional[str] = None
+    
     class Config:
         orm_mode = True
 
@@ -78,3 +79,11 @@ class OrcamentoRead(OrcamentoBase):
 class OrcamentoUpdateEstado(BaseModel):
     """Body para /orcamentos/{id}/estado"""
     estado: EstadoOrc
+    
+class OrcamentoUpdate(BaseModel):
+    entidade_id: Optional[int] = None
+    data: Optional[date] = None
+    observacoes: Optional[str] = None
+    
+    class Config:
+        orm_mode = True
