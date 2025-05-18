@@ -11,6 +11,7 @@ from src.entidades.router import router as entidades_router
 from src.artigos.router import router as artigos_router
 from src.precos.router import router as precos_router
 from src.dentes.router import router as dentes_router
+from src.orcamento.router import router as orcamento_router
 
 
 
@@ -57,6 +58,7 @@ app.include_router(entidades_router, prefix="/entidades", tags=["Entidades"])
 app.include_router(artigos_router, prefix="/artigos", tags=["ArtigosMedicos"])
 app.include_router(precos_router, prefix="/precos", tags=["Precos"])
 app.include_router(dentes_router, prefix="/dentes", tags=["Dentes"])
+app.include_router(orcamento_router, prefix="/orcamentos", tags=["Orcamentos"])
 
 
 

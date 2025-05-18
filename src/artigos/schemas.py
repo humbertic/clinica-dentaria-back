@@ -31,3 +31,12 @@ class ArtigoResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
+        
+class ArtigoMinimal(BaseModel):
+    id: int
+    codigo: str
+    descricao: str
+    
+    class Config:
+        orm_mode = True
