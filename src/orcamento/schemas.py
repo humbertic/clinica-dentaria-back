@@ -27,7 +27,7 @@ class OrcamentoItemBase(BaseModel):
     quantidade: int = Field(default=1, ge=1)  # Validação de inteiro >= 1
 
     numero_dente: Optional[int] = None   # 11-48, 51-85
-    face: Optional[str] = None   # M,D,V,L,O,I
+    face: Optional[List[str]] = None   # M,D,V,L,O,I
 
     preco_entidade: Decimal = Field(..., max_digits=10, decimal_places=2)
     preco_paciente: Decimal = Field(..., max_digits=10, decimal_places=2)

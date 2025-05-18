@@ -147,50 +147,53 @@ def get_recent_orcamentos(db: Session, dias: int = 30) -> List[Orcamento]:
     data_inicio = date.today() - timedelta(days=dias)
     return list_orcamentos(db, data_inicio=data_inicio)
 
-def add_item(
-    db: Session, orc_id: int, item_in: OrcamentoItemCreate
-) -> OrcamentoItem:
+def add_item(db: Session, orc_id: int, item_in: OrcamentoItemCreate) -> OrcamentoItem:
     orc = get_orcamento(db, orc_id)
-
     if orc.estado != EstadoOrc.rascunho:
-        print(orc.estado)
-        raise HTTPException(400, "Só é possível editar orçamentos em rascunho")
+        raise HTTPException(400, "Só pode editar rascunho")
 
     artigo = db.get(ArtigoMedico, item_in.artigo_id)
     if not artigo:
         raise HTTPException(404, "Artigo não encontrado")
 
-    # validações clínicas
+    # 1. Validação dente
     if artigo.requer_dente and not item_in.numero_dente:
         raise HTTPException(400, "Número de dente é obrigatório")
-    if artigo.requer_face and not item_in.face:
-        raise HTTPException(400, "Face é obrigatória")
 
+    # 2. Validação faces (lista)
+    if artigo.requer_face:
+        if not item_in.face or len(item_in.face) == 0:
+            raise HTTPException(400, "Deve indicar pelo menos uma face")
+        invalid = [f for f in item_in.face if f not in {"M","D","V","L","O","I"}]
+        if invalid:
+            raise HTTPException(400, f"Faces inválidas: {', '.join(invalid)}")
+    else:
+        item_in.face = None     # limpa se não precisa
+
+    # 3. Quantidade fixada a 1
+    quantidade = 1
+
+    # 4. Verifica preço (artigo + entidade)
     preco = _get_preco(db, artigo.id, orc.entidade_id)
 
-    subtotal_ent = item_in.quantidade * preco.valor_entidade
-    subtotal_pac = item_in.quantidade * preco.valor_paciente
-
-
     item = OrcamentoItem(
-        orcamento_id=orc.id,
-        artigo_id=artigo.id,
-        quantidade=item_in.quantidade,
-        preco_entidade=preco.valor_entidade,
-        preco_paciente=preco.valor_paciente,
-        subtotal_entidade=subtotal_ent,
-        subtotal_paciente=subtotal_pac,
-        numero_dente=item_in.numero_dente,
-        face=item_in.face,
+        orcamento_id       = orc.id,
+        artigo_id          = artigo.id,
+        quantidade         = quantidade,
+        preco_entidade     = preco.valor_entidade,
+        preco_paciente     = preco.valor_paciente,
+        subtotal_entidade  = preco.valor_entidade,
+        subtotal_paciente  = preco.valor_paciente,
+        numero_dente       = item_in.numero_dente,
+        face              = item_in.face,      # array gravado
     )
     db.add(item)
     db.flush()
-
-    db.refresh(orc)
     _recalc_totais(orc)
     db.commit()
     db.refresh(item)
     return item
+
 
 
 def delete_item(db: Session, orc_id: int, item_id: int) -> None:
@@ -203,6 +206,8 @@ def delete_item(db: Session, orc_id: int, item_id: int) -> None:
         raise HTTPException(404, "Item não encontrado")
 
     db.delete(item)
+    db.flush()
+    db.refresh(orc)
     _recalc_totais(orc)
     db.commit()
 

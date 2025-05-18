@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, Numeric, Date, Enum, ForeignKey, SmallInteger, String
+    Column, Integer, Numeric, Date, Enum, ForeignKey, SmallInteger, String, ARRAY, TEXT
 )
 from sqlalchemy.orm import relationship
 from src.database import Base
@@ -46,7 +46,7 @@ class OrcamentoItem(Base):
     subtotal_paciente  = Column(Numeric(12, 2), nullable=False)
 
     numero_dente       = Column(SmallInteger, nullable=True)
-    face               = Column(String(1), nullable=True)       # M,D,V,L,O,I
+    face = Column(ARRAY(TEXT), nullable=True)       # M,D,V,L,O,I
 
     orcamento = relationship("Orcamento", back_populates="itens")
     artigo    = relationship("ArtigoMedico")
