@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from fastapi import HTTPException, status
 from src.utilizadores import models, schemas, utils
 from src.utilizadores.utils import is_master_admin
@@ -411,5 +412,24 @@ def obter_me(db: Session, utilizador_id: int):
         "perfil": perfil_dict,
         "clinicas": clinicas_list
     }
+    
+    
+
+def listar_medicos_por_clinica(db: Session, clinica_id: int) -> list[models.Utilizador]:
+    """
+    Retorna todos os utilizadores cujo perfil em UtilizadorClinica
+    é 'doctor' e que estejam ativos na clínica dada.
+    """
+    return (
+        db.query(models.Utilizador)
+          .join(models.UtilizadorClinica, models.Utilizador.perfis)
+          .join(models.Perfil)
+          .filter(
+              models.UtilizadorClinica.clinica_id == clinica_id,
+              models.UtilizadorClinica.ativo == True,
+              func.lower(models.Perfil.perfil) == "doctor"
+          )
+          .all()
+    )
     
     

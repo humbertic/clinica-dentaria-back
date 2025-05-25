@@ -24,6 +24,7 @@ from src.artigos import models as artigos_models
 from src.precos import models as precos_models
 from src.dentes import models as dentes_models
 from src.orcamento import models as orcamento_models
+from src.marcacoes import models as marcacoes_models
 
 # Carrega a config do .ini
 config = context.config

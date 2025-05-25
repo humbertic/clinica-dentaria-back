@@ -87,6 +87,22 @@ def alterar_senha(
 ):
     return service.alterar_senha(db, utilizador.id, req.senha_atual, req.nova_senha)
 
+
+@router.get(
+    "/clinica/{clinica_id}/medicos",
+    response_model=List[schemas.UtilizadorResponse],
+    summary="Listar médicos de uma clínica",
+)
+def listar_medicos_clinica(
+    clinica_id: int,
+    db: Session = Depends(get_db),
+    utilizador: models.Utilizador = Depends(get_current_user)
+):
+    """
+    Retorna todos os utilizadores com perfil 'doctor' na clínica informada.
+    """
+    return service.listar_medicos_por_clinica(db, clinica_id)
+
 # Obter utilizador por ID (apenas Master Admin)
 @router.get("/{user_id}", response_model=schemas.UtilizadorResponse)
 def obter_utilizador(
