@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
-
+from typing import List, Optional
+from datetime import date
 from src.database import SessionLocal
 from src.utilizadores.dependencies import get_current_user
 from src.utilizadores.models import Utilizador
@@ -42,6 +42,37 @@ def criar_consulta(
 
 
 @router.get(
+    "",
+    response_model=List[schemas.ConsultaRead],
+    summary="Listar consultas",
+)
+def listar_consultas(
+    clinica_id: int = Query(..., description="ID da clínica (obrigatório)"),
+    medico_id: Optional[int] = Query(None, description="ID do médico"),
+    paciente_id: Optional[int] = Query(None, description="ID do paciente"),
+    entidade_id: Optional[int] = Query(None, description="ID da entidade"),
+    data_inicio: Optional[date] = Query(None, description="Data mínima"),
+    data_fim: Optional[date] = Query(None, description="Data máxima"),
+    estado: Optional[str] = Query(None, description="Estado da consulta"),
+    db: Session = Depends(get_db),
+    utilizador_atual: Utilizador = Depends(get_current_user),
+):
+    """
+    Lista todas as consultas filtrando por clínica (obrigatório) e demais filtros opcionais.
+    """
+    return service.list_consultas(
+        db,
+        clinica_id=clinica_id,
+        medico_id=medico_id,
+        paciente_id=paciente_id,
+        entidade_id=entidade_id,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        estado=estado,
+    )
+    
+    
+@router.get(
     "/{consulta_id}",
     response_model=schemas.ConsultaFull,
     summary="Obter consulta por ID",
@@ -52,7 +83,7 @@ def obter_consulta(
     utilizador_atual: Utilizador = Depends(get_current_user),
 ):
     """
-    Retorna os detalhes da consulta, incluindo itens associados.
+    Retorna os detalhes de uma consulta específica, incluindo todos os seus itens.
     """
     return service.get_consulta(db, consulta_id)
 

@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from fastapi import HTTPException, status
-
+from typing import Optional, List
+from datetime import date
 from src.consultas.models import Consulta, ConsultaItem
 from src.consultas.schemas import (
     ConsultaCreate,
@@ -186,3 +188,32 @@ def update_item(
     db.commit()
     db.refresh(item)
     return item
+
+
+
+def list_consultas(
+    db: Session,
+    clinica_id: int,
+    medico_id: Optional[int] = None,
+    paciente_id: Optional[int] = None,
+    entidade_id: Optional[int] = None,
+    data_inicio: Optional[date] = None,
+    data_fim: Optional[date] = None,
+    estado: Optional[str] = None,
+) -> List[Consulta]:
+    q = db.query(Consulta).filter(Consulta.clinica_id == clinica_id)
+    
+    if medico_id:
+        q = q.filter(Consulta.medico_id == medico_id)
+    if paciente_id:
+        q = q.filter(Consulta.paciente_id == paciente_id)
+    if entidade_id:
+        q = q.filter(Consulta.entidade_id == entidade_id)
+    if data_inicio:
+        q = q.filter(func.date(Consulta.data_inicio) >= data_inicio)
+    if data_fim:
+        q = q.filter(func.date(Consulta.data_inicio) <= data_fim)
+    if estado:
+        q = q.filter(Consulta.estado == estado)
+    
+    return q.order_by(Consulta.data_inicio.desc()).all()

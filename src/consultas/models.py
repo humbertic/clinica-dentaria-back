@@ -3,6 +3,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from src.database import Base
+from src.artigos.models import ArtigoMedico
 
 class Consulta(Base):
     __tablename__ = "Consultas"
@@ -42,4 +43,4 @@ class ConsultaItem(Base):
     total           = Column(Numeric(12,2), nullable=False, default=0)
 
     consulta  = relationship("Consulta", back_populates="itens")
-    artigo    = relationship("Artigo")
+    artigo    = relationship("ArtigoMedico")
