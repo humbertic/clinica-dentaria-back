@@ -43,7 +43,7 @@ def criar_consulta(
 
 @router.get(
     "",
-    response_model=List[schemas.ConsultaRead],
+    response_model=List[schemas.ConsultaFull],
     summary="Listar consultas",
 )
 def listar_consultas(
@@ -54,6 +54,7 @@ def listar_consultas(
     data_inicio: Optional[date] = Query(None, description="Data mínima"),
     data_fim: Optional[date] = Query(None, description="Data máxima"),
     estado: Optional[str] = Query(None, description="Estado da consulta"),
+    
     db: Session = Depends(get_db),
     utilizador_atual: Utilizador = Depends(get_current_user),
 ):
@@ -155,3 +156,15 @@ def atualizar_item(
     Atualiza apenas os campos fornecidos de um item de consulta.
     """
     return service.update_item(db, item_id, changes)
+
+
+@router.delete("/itens/{item_id}", response_model=bool)
+async def delete_consulta_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    utilizador_atual: Utilizador = Depends(get_current_user),
+):
+    """
+    Remove um item de consulta
+    """
+    return service.delete_item(db, item_id)

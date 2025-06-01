@@ -67,7 +67,6 @@ class ConsultaRead(ConsultaBase):
 class ConsultaItemBase(BaseModel):
     artigo_id:      int          = Field(..., description="ID do artigo/procedimento")
     quantidade:     Optional[int] = Field(1, description="Número de unidades")
-    preco_unitario: float        = Field(..., description="Preço unitário do artigo")
     numero_dente:   Optional[int] = Field(None, description="Número do dente (1–32)")
     face:           Optional[List[str]] = Field(
         None,
@@ -79,6 +78,7 @@ class ConsultaItemCreate(ConsultaItemBase):
 
 class ConsultaItemRead(ConsultaItemBase):
     id:    int    = Field(..., description="ID do item da consulta")
+    preco_unitario: float = Field(..., description="Preço unitário do artigo/procedimento")
     total: float  = Field(..., description="Total calculado (quantidade × preço_unitário)")
     artigo: ArtigoInfo = Field(..., description="Informações do artigo")
 

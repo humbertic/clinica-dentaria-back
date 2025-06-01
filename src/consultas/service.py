@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 from sqlalchemy import func
 from fastapi import HTTPException, status
 from typing import Optional, List
@@ -191,6 +191,9 @@ def update_item(
 
 
 
+
+# ... resto das importações ...
+
 def list_consultas(
     db: Session,
     clinica_id: int,
@@ -201,8 +204,12 @@ def list_consultas(
     data_fim: Optional[date] = None,
     estado: Optional[str] = None,
 ) -> List[Consulta]:
-    q = db.query(Consulta).filter(Consulta.clinica_id == clinica_id)
+    # Usando joinedload para carregar os itens relacionados
+    q = db.query(Consulta).options(
+        joinedload(Consulta.itens).joinedload(ConsultaItem.artigo)
+    ).filter(Consulta.clinica_id == clinica_id)
     
+    # Resto do código permanece igual
     if medico_id:
         q = q.filter(Consulta.medico_id == medico_id)
     if paciente_id:
@@ -217,3 +224,31 @@ def list_consultas(
         q = q.filter(Consulta.estado == estado)
     
     return q.order_by(Consulta.data_inicio.desc()).all()
+
+
+def delete_item(db: Session, item_id: int) -> bool:
+    """
+    Remove um item de consulta
+    
+    Args:
+        db: Sessão do banco de dados
+        item_id: ID do item a ser removido
+        
+    Returns:
+        True se o item foi removido com sucesso
+        
+    Raises:
+        HTTPException: Se o item não for encontrado
+    """
+    item = get_item(db, item_id)
+    
+    # Verificar se a consulta está em um estado que permite edição
+    if item.consulta.estado == "concluida":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Não é possível remover itens de uma consulta concluída"
+        )
+    
+    db.delete(item)
+    db.commit()
+    return True
