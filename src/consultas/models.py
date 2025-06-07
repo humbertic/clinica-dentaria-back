@@ -23,7 +23,28 @@ class Consulta(Base):
     updated_at   = Column(DateTime(timezone=True), server_default=func.now(),
                           onupdate=func.now(), nullable=False)
 
-    paciente   = relationship("Paciente")
+    paciente = relationship(
+        "Paciente", 
+        back_populates="consultas",
+        lazy="joined"
+    )
+    anotacoes = relationship(
+        "AnotacaoClinica", 
+        back_populates="consulta",
+        cascade="all, delete-orphan"
+    )
+    
+    ficheiros = relationship(
+        "FicheiroClinico", 
+        back_populates="consulta",
+        cascade="all, delete-orphan"
+    )
+    
+    # planos = relationship(
+    #     "ConsultaPlanoTratamento", 
+    #     back_populates="consulta",
+    #     cascade="all, delete-orphan"
+    # )
     clinica    = relationship("Clinica")
     medico     = relationship("Utilizador", foreign_keys=[medico_id])
     entidade   = relationship("Entidade", foreign_keys=[entidade_id])

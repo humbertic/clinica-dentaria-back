@@ -2,7 +2,8 @@ from sqlalchemy.orm import Session,joinedload
 from sqlalchemy import func
 from fastapi import HTTPException, status
 from typing import Optional, List
-from datetime import date
+from datetime import date, datetime
+from src.orcamento.models import Orcamento, OrcamentoItem
 from src.consultas.models import Consulta, ConsultaItem
 from src.consultas.schemas import (
     ConsultaCreate,
@@ -10,7 +11,7 @@ from src.consultas.schemas import (
     ConsultaItemCreate,
     ConsultaItemUpdate,
 )
-from src.pacientes.models import Paciente
+from src.pacientes.models import Paciente, PlanoItem, PlanoTratamento
 from src.clinica.models import Clinica
 from src.utilizadores.models import Utilizador
 from src.entidades.models import Entidade
@@ -57,7 +58,79 @@ def create_consulta(
     db.add(consulta)
     db.commit()
     db.refresh(consulta)
+    
+    # 3) Verificar se existe um plano de tratamento para o paciente
+    plano_existente = (
+        db.query(PlanoTratamento)
+        .filter(PlanoTratamento.paciente_id == payload.paciente_id)
+        .first()
+    )
+    
+    # 4) Se não existir plano, verificar se há orçamentos aprovados
+    if not plano_existente:
+        create_treatment_plan_from_orcamentos(db, payload.paciente_id)
+    
     return consulta
+
+def create_treatment_plan_from_orcamentos(
+    db: Session, 
+    paciente_id: int
+) -> Optional[int]:
+    """
+    Creates a treatment plan for a patient based on approved orcamentos that don't have a plan yet.
+    
+    Args:
+        db: Database session
+        paciente_id: Patient ID
+        
+    Returns:
+        The ID of the created plan, or None if no plan was created
+    """
+    # Find approved orcamentos for this patient
+    orcamentos_aprovados = (
+        db.query(Orcamento)
+        .filter(
+            Orcamento.paciente_id == paciente_id,
+            Orcamento.estado == "aprovado"
+        )
+        .all()
+    )
+    
+    if not orcamentos_aprovados:
+        return None
+    
+    # Create a new treatment plan
+    novo_plano = PlanoTratamento(
+        paciente_id=paciente_id,
+        estado="em_curso",
+        data_criacao=datetime.now()
+    )
+    db.add(novo_plano)
+    db.flush()
+    
+    # Create plan items from all approved orcamentos
+    for orcamento in orcamentos_aprovados:
+        itens_orcamento = (
+            db.query(OrcamentoItem)
+            .filter(OrcamentoItem.orcamento_id == orcamento.id)
+            .all()
+        )
+        
+        for item_orcamento in itens_orcamento:
+            item_plano = PlanoItem(
+                plano_id=novo_plano.id,
+                orcamento_item_id=item_orcamento.id,
+                artigo_id=item_orcamento.artigo_id,
+                quantidade_prevista=item_orcamento.quantidade,
+                numero_dente=item_orcamento.numero_dente,
+                face=item_orcamento.face,
+                quantidade_executada=0,
+                estado="pendente"
+            )
+            db.add(item_plano)
+    
+    db.commit()
+    return novo_plano.id
 
 
 def update_consulta(

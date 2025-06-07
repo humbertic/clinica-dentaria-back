@@ -1,6 +1,8 @@
 from sqlalchemy import (
+    ARRAY,
     Column,
     Integer,
+    SmallInteger,
     String,
     Text,
     Boolean,
@@ -61,7 +63,11 @@ class Paciente(Base):
         backref="pacientes",
         lazy="joined",           # joined-load por omissão
     )
-    # consultas = relationship("Consulta", back_populates="paciente")  # ← adicionar depois
+    consultas = relationship(
+        "Consulta", 
+        back_populates="paciente",
+        lazy="select"
+    )
 
     def __repr__(self) -> str:  # type: ignore[override]
         return f"<Paciente {self.id} - {self.nome}>"
@@ -137,11 +143,12 @@ class AnotacaoClinica(Base):
 
     id = Column(Integer, primary_key=True)
     ficha_id = Column(Integer, ForeignKey("FichaClinica.id"))
-    # consulta_id = Column(Integer, ForeignKey("Consulta.id"), nullable=True)   # ← adicionar depois
+    consulta_id = Column(Integer, ForeignKey("Consultas.id"), nullable=True)   
     texto = Column(Text, nullable=False)
     data = Column(DateTime, server_default=func.now())
 
     ficha = relationship("FichaClinica", back_populates="anotacoes")
+    consulta = relationship("Consulta", back_populates="anotacoes") 
 
 # ---------- FICHEIRO CLÍNICO ----------
 class FicheiroClinico(Base):
@@ -149,35 +156,52 @@ class FicheiroClinico(Base):
 
     id = Column(Integer, primary_key=True)
     ficha_id = Column(Integer, ForeignKey("FichaClinica.id"))
-    # consulta_id = Column(Integer, ForeignKey("Consulta.id"), nullable=True)   # ← adicionar depois
+    consulta_id = Column(Integer, ForeignKey("Consultas.id"), nullable=True)   
     tipo = Column(String(50))                         # radiografia, pdf, imagem, etc.
     caminho_ficheiro = Column(Text)
     data_upload = Column(DateTime, server_default=func.now())
 
     ficha = relationship("FichaClinica", back_populates="ficheiros")
+    consulta = relationship("Consulta", back_populates="ficheiros")
 
 # ---------- PLANO DE TRATAMENTO ----------
 class PlanoTratamento(Base):
     __tablename__ = "PlanoTratamento"
-
-    id = Column(Integer, primary_key=True)
-    paciente_id = Column(Integer, ForeignKey("Paciente.id"))
-    descricao = Column(Text)
-    estado = Column(String(50))                       # em_curso / concluido_parcial / concluido_total
+    id              = Column(Integer, primary_key=True, index=True)
+    paciente_id     = Column(Integer, ForeignKey("Paciente.id"), nullable=False)
+    data_criacao    = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    estado          = Column(String(50), nullable=False, default="em_curso")
+    data_conclusao  = Column(DateTime(timezone=True), nullable=True)
 
     paciente = relationship("Paciente", back_populates="planos")
-    consultas = relationship(
-        "ConsultaPlanoTratamento",
-        back_populates="plano",
-        cascade="all, delete-orphan",
-    )
+    itens    = relationship("PlanoItem", back_populates="plano", cascade="all, delete-orphan")
+
 
 # ---------- LIGAÇÃO CONSULTA <-> PLANO ----------
-class ConsultaPlanoTratamento(Base):
-    __tablename__ = "ConsultaPlanoTratamento"
+# class ConsultaPlanoTratamento(Base):
+#     __tablename__ = "ConsultaPlanoTratamento"
 
-    # consulta_id = Column(Integer, ForeignKey("Consulta.id"), primary_key=True)  # ← adicionar depois
-    plano_id = Column(Integer, ForeignKey("PlanoTratamento.id"), primary_key=True)
+#     consulta_id = Column(Integer, ForeignKey("Consultas.id"), primary_key=True) 
+#     plano_id = Column(Integer, ForeignKey("PlanoTratamento.id"), primary_key=True)
 
-    plano = relationship("PlanoTratamento", back_populates="consultas")
-    # consulta relationship será adicionada quando o modelo Consulta existir
+#     plano = relationship("PlanoTratamento", back_populates="consultas")
+#     consulta = relationship("Consulta", back_populates="planos")  
+
+class PlanoItem(Base):
+    __tablename__ = "PlanoItem"
+    id                 = Column(Integer, primary_key=True, index=True)
+    plano_id           = Column(Integer, ForeignKey("PlanoTratamento.id"), nullable=False)
+    orcamento_item_id  = Column(Integer, ForeignKey("OrcamentoItens.id"), nullable=False)
+    artigo_id          = Column(Integer, ForeignKey("Artigos.id"),     nullable=False)
+
+    quantidade_prevista    = Column(Integer, nullable=False)
+    numero_dente           = Column(SmallInteger, nullable=True)
+    face                   = Column(ARRAY(Text), nullable=True)
+
+    quantidade_executada   = Column(Integer, nullable=False, default=0)
+    estado                 = Column(String(20), nullable=False, default="pendente")
+
+    plano           = relationship("PlanoTratamento", back_populates="itens")
+    orcamento_item  = relationship("OrcamentoItem", lazy="joined")
+    artigo          = relationship("ArtigoMedico",  lazy="joined")
+

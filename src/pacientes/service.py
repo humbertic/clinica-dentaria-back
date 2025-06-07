@@ -6,6 +6,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.pacientes import models, schemas
 from src.auditoria.utils import registrar_auditoria
+from sqlalchemy import func
+from src.consultas.models import Consulta, ConsultaItem
+from datetime import datetime
+import os
+import uuid
+import shutil
+from fastapi import UploadFile
 
 
 
@@ -40,21 +47,211 @@ def criar_paciente(
     return paciente
 
 
+
 def listar_pacientes(db: Session, clinica_id: int):
-    return (
+    """
+    Lista todos os pacientes de uma clínica com informações resumidas:
+    - Total de consultas
+    - Número de planos ativos
+    - Indicação se tem ficha clínica
+    - Próxima consulta agendada
+    """
+   
+    
+    # Buscar pacientes da clínica
+    pacientes = (
         db.query(models.Paciente)
           .options(selectinload(models.Paciente.clinica))
           .filter_by(clinica_id=clinica_id)
           .order_by(models.Paciente.nome)
           .all()
     )
-
+    
+    # Enriquecer com dados derivados
+    for paciente in pacientes:
+        # Contar consultas
+        paciente.total_consultas = (
+            db.query(func.count(Consulta.id))
+            .filter(Consulta.paciente_id == paciente.id)
+            .scalar() or 0
+        )
+        
+        # Contar planos ativos
+        paciente.planos_ativos = (
+            db.query(func.count(models.PlanoTratamento.id))
+            .filter(
+                models.PlanoTratamento.paciente_id == paciente.id,
+                models.PlanoTratamento.estado == "em_curso"
+            )
+            .scalar() or 0
+        )
+        
+        # Verificar se tem ficha clínica
+        paciente.tem_ficha_clinica = (
+            db.query(models.FichaClinica)
+            .filter(models.FichaClinica.paciente_id == paciente.id)
+            .first() is not None
+        )
+        
+        # Buscar próxima consulta
+        paciente.proxima_consulta = (
+            db.query(Consulta)
+            .filter(
+                Consulta.paciente_id == paciente.id,
+                Consulta.estado == "agendada",
+                Consulta.data_inicio > datetime.now()
+            )
+            .order_by(Consulta.data_inicio)
+            .first()
+        )
+    
+    return pacientes
 
 def obter_paciente(db: Session, paciente_id: int) -> models.Paciente:
-    paciente = db.query(models.Paciente).filter_by(id=paciente_id).first()
+    """
+    Recupera um paciente pelo ID com todas as suas relações:
+    - Fichas clínicas com anotações e ficheiros
+    - Planos de tratamento com itens
+    - Consultas com itens
+    - Próxima consulta agendada
+    """
+    
+    paciente = (
+        db.query(models.Paciente)
+          .options(
+              # Fichas clínicas e seus relacionamentos
+              selectinload(models.Paciente.fichas)
+                .selectinload(models.FichaClinica.anotacoes),
+              selectinload(models.Paciente.fichas)
+                .selectinload(models.FichaClinica.ficheiros),
+              # Planos de tratamento e seus itens
+              selectinload(models.Paciente.planos)
+                .selectinload(models.PlanoTratamento.itens)
+                .selectinload(models.PlanoItem.artigo),
+              # Consultas e seus relacionamentos
+              selectinload(models.Paciente.consultas)
+                .selectinload(Consulta.medico), 
+              selectinload(models.Paciente.consultas)
+                .selectinload(Consulta.entidade), 
+              selectinload(models.Paciente.consultas)
+                .selectinload(Consulta.itens)
+                .selectinload(ConsultaItem.artigo),
+              
+              # Clínica
+              selectinload(models.Paciente.clinica)
+          )
+          .filter(models.Paciente.id == paciente_id)
+          .first()
+    )
+    
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente não encontrado.")
+    
+    procedimentos_historico = []
+
+    for plano in paciente.planos:
+        # Adicionar descrição ao plano
+        setattr(plano, 'descricao', f"Plano de tratamento #{plano.id}")
+        
+        # Adicionar campos virtuais aos itens do plano
+        for item in plano.itens:
+            if item.artigo:
+                # Garantir que o artigo tenha nome e código corretos
+                if not hasattr(item.artigo, 'descricao') or not item.artigo.descricao:
+                    setattr(item.artigo, 'descricao', f"Artigo {item.artigo.id}")
+                if not hasattr(item.artigo, 'codigo') or not item.artigo.codigo:
+                    setattr(item.artigo, 'codigo', f"COD-{item.artigo.id}")
+    
+    # Adicionar campos virtuais às consultas e processar os itens
+    for consulta in paciente.consultas:
+        # Garantir que médico e entidade tenham atributos de nome
+        if consulta.medico and (not hasattr(consulta.medico, 'nome') or not consulta.medico.nome):
+            setattr(consulta.medico, 'nome', f"Médico {consulta.medico.id}")
+        if consulta.entidade and (not hasattr(consulta.entidade, 'nome') or not consulta.entidade.nome):
+            setattr(consulta.entidade, 'nome', f"Entidade {consulta.entidade.id}")
+        
+        # Processar itens da consulta
+        if hasattr(consulta, 'itens') and consulta.itens:
+            for item in consulta.itens:
+                # Adicionar informações do artigo ao item da consulta
+                if hasattr(item, 'artigo') and item.artigo:
+                    # Garantir que o artigo tenha descrição
+                    if not hasattr(item.artigo, 'descricao') or not item.artigo.descricao:
+                        setattr(item.artigo, 'descricao', f"Artigo {item.artigo.id}")
+                    if not hasattr(item.artigo, 'codigo') or not item.artigo.codigo:
+                        setattr(item.artigo, 'codigo', f"COD-{item.artigo.id}")
+                    
+                    # Adicionar atributos diretamente ao item para facilitar serialização
+                    setattr(item, 'artigo_descricao', item.artigo.descricao)
+                    setattr(item, 'artigo_codigo', item.artigo.codigo)
+                else:
+                    # Se o artigo não estiver carregado, obter diretamente do banco
+                    from src.artigos.models import Artigo
+                    artigo = db.query(Artigo).filter_by(id=item.artigo_id).first()
+                    if artigo:
+                        setattr(item, 'artigo_descricao', artigo.descricao)
+                        setattr(item, 'artigo_codigo', artigo.codigo)
+                    else:
+                        setattr(item, 'artigo_descricao', f"Artigo {item.artigo_id}")
+                        setattr(item, 'artigo_codigo', f"COD-{item.artigo_id}")
+                
+                # Para consultas concluídas, também adicionar ao histórico de procedimentos
+                if consulta.estado == "concluida":
+                    procedimento = {
+                        'id': item.id,
+                        'consulta_id': consulta.id,
+                        'consulta_data': consulta.data_inicio.isoformat() if consulta.data_inicio else None,
+                        'artigo_id': item.artigo_id,
+                        'artigo_descricao': getattr(item, 'artigo_descricao', f"Artigo {item.artigo_id}"),
+                        'artigo_codigo': getattr(item, 'artigo_codigo', f"COD-{item.artigo_id}"),
+                        'numero_dente': item.numero_dente,
+                        'face': item.face,
+                        'total': item.total,
+                        'medico_id': consulta.medico_id,
+                        'medico_nome': getattr(consulta.medico, 'nome', f"Médico {consulta.medico_id}") if consulta.medico else None
+                    }
+                    procedimentos_historico.append(procedimento)
+    
+    # Ordenar histórico de procedimentos por data, mais recente primeiro
+    procedimentos_historico.sort(
+        key=lambda x: x['consulta_data'] if x['consulta_data'] else "", 
+        reverse=True
+    )
+    
+    # Adicionar o histórico de procedimentos ao objeto do paciente
+    setattr(paciente, 'procedimentos_historico', procedimentos_historico)
+    
     return paciente
+    
+
+
+def buscar_pacientes_por_nome(db: Session, nome_parcial: str, clinica_id: Optional[int] = None):
+    """
+    Busca pacientes cujo nome contenha o termo de busca.
+    Opcionalmente filtra por clínica.
+    """
+    query = db.query(models.Paciente).filter(
+        models.Paciente.nome.ilike(f"%{nome_parcial}%")
+    )
+    
+    if clinica_id is not None:
+        query = query.filter(models.Paciente.clinica_id == clinica_id)
+    
+    return query.order_by(models.Paciente.nome).limit(10).all()
+
+def obter_ficha_por_paciente(db: Session, paciente_id: int) -> Optional[models.FichaClinica]:
+    """
+    Obtém a ficha clínica de um paciente, se existir.
+    """
+    return (
+        db.query(models.FichaClinica)
+          .options(
+              selectinload(models.FichaClinica.anotacoes),
+              selectinload(models.FichaClinica.ficheiros)
+          )
+          .filter(models.FichaClinica.paciente_id == paciente_id)
+          .first()
+    )
 
 
 def atualizar_paciente(
@@ -191,22 +388,48 @@ def adicionar_anotacao(
 def upload_ficheiro_clinico(
     db: Session,
     dados: schemas.FicheiroClinicoCreate,
-    utilizador_id: int
+    utilizador_id: int,
+    ficheiro: UploadFile = None  
 ) -> models.FicheiroClinico:
-    ficheiro = models.FicheiroClinico(**dados.dict())
-    db.add(ficheiro)
+    """
+    Saves a clinical file and creates a database record.
+    
+    This function can handle two scenarios:
+    1. Direct file upload: When ficheiro is provided, it saves the file and creates a record
+    2. Path-based: When caminho_ficheiro is provided in dados, it just creates a record
+    """
+    # If a file was uploaded, save it and update the path
+    if ficheiro:
+        # Create uploads directory if it doesn't exist
+        upload_dir = "uploads/ficheiros"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Create a unique filename to avoid collisions
+        filename = f"{uuid.uuid4()}_{ficheiro.filename}"
+        file_path = os.path.join(upload_dir, filename)
+        
+        # Save the uploaded file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(ficheiro.file, buffer)
+        
+        # Update the path in dados
+        dados.caminho_ficheiro = file_path
+    
+    # Create and save the database record
+    ficheiro_db = models.FicheiroClinico(**dados.dict())
+    db.add(ficheiro_db)
     db.commit()
-    db.refresh(ficheiro)
+    db.refresh(ficheiro_db)
 
     registrar_auditoria(
         db,
         utilizador_id,
         "Upload",
         "FicheiroClinico",
-        ficheiro.id,
-        f"Ficheiro '{ficheiro.tipo}' anexado à ficha {dados.ficha_id}."
+        ficheiro_db.id,
+        f"Ficheiro '{ficheiro_db.tipo}' anexado à ficha {dados.ficha_id}."
     )
-    return ficheiro
+    return ficheiro_db
 
 
 # -------------------------------------------------

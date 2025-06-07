@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from src.database import SessionLocal
 from src.utilizadores.dependencies import get_current_user
@@ -8,7 +8,8 @@ from src.utilizadores.utils import is_master_admin
 from src.utilizadores.models import Utilizador
 
 from . import service, schemas, models, template
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse,FileResponse
+import os
 
 
 router = APIRouter()
@@ -78,6 +79,20 @@ def listar_pacientes_endpoint(
     # (perm checks se precisares)
     return service.listar_pacientes(db, clinica_id)
 
+@router.get("/search", response_model=list[schemas.PacienteMinimalResponse])
+def buscar_pacientes_endpoint(
+    q: str,
+    clinica_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    utilizador_atual: Utilizador = Depends(get_current_user),
+):
+    """
+    Busca pacientes pelo nome para uso em campos de autocompletar.
+    """
+    if len(q) < 2:
+        return []
+    return service.buscar_pacientes_por_nome(db, q, clinica_id)
+
 
 @router.get("/{paciente_id}", response_model=schemas.PacienteResponse)
 def obter_paciente_por_id(
@@ -134,7 +149,7 @@ def ler_ficha_clinica(
         raise HTTPException(status_code=404, detail="Ficha clínica não encontrada.")
     return ficha
 
-@router.put("/{ficha_id}", response_model=schemas.FichaClinicaResponse)
+@router.put("/ficha/{ficha_id}", response_model=schemas.FichaClinicaResponse)
 def atualizar_ficha_clinica(
     ficha_id: int,
     dados: schemas.FichaClinicaUpdate,
@@ -152,7 +167,7 @@ def atualizar_ficha_clinica(
 
 
 # ---------- ANOTAÇÃO ----------
-@router.post("/anotacoes", response_model=schemas.AnotacaoClinicaResponse)
+@router.post("/ficha/anotacoes", response_model=schemas.AnotacaoClinicaResponse)
 def adicionar_anotacao(
     dados: schemas.AnotacaoClinicaCreate,
     db: Session = Depends(get_db),
@@ -162,13 +177,48 @@ def adicionar_anotacao(
 
 
 # ---------- FICHEIRO ----------
-@router.post("/ficheiros", response_model=schemas.FicheiroClinicoResponse)
+@router.post("/ficha/ficheiros", response_model=schemas.FicheiroClinicoResponse)
 def upload_ficheiro(
-    dados: schemas.FicheiroClinicoCreate,
+    ficha_id: int = Form(...),
+    tipo: str = Form(...),
+    ficheiro: UploadFile = File(...),
     db: Session = Depends(get_db),
     utilizador_atual: Utilizador = Depends(get_current_user),
 ):
-    return service.upload_ficheiro_clinico(db, dados, utilizador_atual.id)
+    dados = schemas.FicheiroClinicoCreate(
+        ficha_id=ficha_id,
+        tipo=tipo,
+        caminho_ficheiro=None  
+    )
+    
+    return service.upload_ficheiro_clinico(db, dados, utilizador_atual.id, ficheiro)
+
+
+@router.get("/ficha/ficheiros/{ficheiro_id}/view")
+def view_ficheiro(
+    ficheiro_id: int,
+    db: Session = Depends(get_db),
+    utilizador_atual: Utilizador = Depends(get_current_user),
+):
+    # Get the file record from the database
+    ficheiro = db.query(models.FicheiroClinico).filter(models.FicheiroClinico.id == ficheiro_id).first()
+    
+    if not ficheiro:
+        raise HTTPException(status_code=404, detail="Ficheiro não encontrado")
+    
+    # Check if the file exists on disk
+    if not os.path.exists(ficheiro.caminho_ficheiro):
+        raise HTTPException(status_code=404, detail="Arquivo físico não encontrado")
+    
+    # Determine the media type based on the file extension
+    filename = os.path.basename(ficheiro.caminho_ficheiro)
+    
+    # Return the file as a response
+    return FileResponse(
+        path=ficheiro.caminho_ficheiro,
+        filename=filename,
+        # The media_type will be inferred from the file extension
+    )
 
 
 # ---------- PLANO DE TRATAMENTO ----------

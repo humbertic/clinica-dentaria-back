@@ -1,3 +1,4 @@
+from fastapi import UploadFile, Form, File
 from datetime import date, datetime
 from typing import List, Optional, Dict, Any
 
@@ -119,7 +120,7 @@ class AnotacaoClinicaResponse(BaseModel):
 class FicheiroClinicoCreate(BaseModel):
     ficha_id: int
     tipo: str                # ex.: "radiografia"
-    caminho_ficheiro: str
+    caminho_ficheiro: Optional[str] = None
 
 
 class FicheiroClinicoResponse(BaseModel):
@@ -156,6 +157,93 @@ class PlanoTratamentoResponse(BaseModel):
         orm_mode = True
 
 
+class ConsultaMedicoMinimal(BaseModel):
+    id: int
+    nome: str
+    
+    class Config:
+        orm_mode = True
+
+class ConsultaItemMinimal(BaseModel):
+    id: int
+    artigo_id: int
+    artigo_descricao: Optional[str] = None
+    numero_dente: Optional[int] = None
+    face: Optional[List[str]] = None
+    total: Optional[float] = None
+    
+    class Config:
+        orm_mode = True
+
+class ConsultaEntidadeMinimal(BaseModel):
+    id: int
+    nome: str
+    
+    class Config:
+        orm_mode = True
+
+class ConsultaMinimalResponse(BaseModel):
+    id: int
+    data_inicio: datetime
+    data_fim: Optional[datetime] = None
+    estado: str  # agendada, iniciada, concluida, cancelada, falta
+    observacoes: Optional[str] = None
+    medico_id: int
+    medico: Optional[ConsultaMedicoMinimal] = None
+    entidade_id: Optional[int] = None
+    entidade: Optional[ConsultaEntidadeMinimal] = None
+    itens: List[ConsultaItemMinimal] = []
+    
+    class Config:
+        orm_mode = True
+
+class ArtigoMedicoMinimal(BaseModel):
+    id: int
+    descricao: str
+    codigo: str
+    
+    class Config:
+        orm_mode = True
+
+class PlanoItemResponse(BaseModel):
+    id: int
+    plano_id: int
+    artigo_id: int
+    artigo: Optional[ArtigoMedicoMinimal] = None
+    quantidade_prevista: int
+    quantidade_executada: int
+    numero_dente: Optional[int] = None
+    face: Optional[List[str]] = None
+    estado: str  # pendente, em_curso, concluido, cancelado
+    
+    class Config:
+        orm_mode = True
+
+class PlanoTratamentoDetailResponse(PlanoTratamentoResponse):
+    data_criacao: datetime
+    data_conclusao: Optional[datetime] = None
+    itens: List[PlanoItemResponse] = []
+    
+    class Config:
+        orm_mode = True
+
+
+class ProcedimentoHistoricoItem(BaseModel):
+    id: int
+    consulta_id: int
+    consulta_data: Optional[str] = None
+    artigo_id: int
+    artigo_descricao: str
+    numero_dente: Optional[int] = None
+    face: Optional[str] = None
+    total: Optional[float] = None
+    medico_id: Optional[int] = None
+    medico_nome: Optional[str] = None
+    
+    class Config:
+        orm_mode = True
+
+
 # -------------------------------------------------
 # ---------- RESPOSTAS COMPLETAS ------------------
 # -------------------------------------------------
@@ -180,7 +268,10 @@ class PacienteResponse(BaseModel):
     morada: Optional[str] = None
     clinica: ClinicaMinimalResponse
     fichas: List[FichaClinicaWithChildren] = []
-    planos: List[PlanoTratamentoResponse] = []
+    planos: List[PlanoTratamentoDetailResponse] = []
+    consultas: List[ConsultaMinimalResponse] = []
+    procedimentos_historico: List[ProcedimentoHistoricoItem] = []
+
 
     class Config:
         orm_mode = True
@@ -200,6 +291,12 @@ class PacienteListItemResponse(BaseModel):
     pais_residencia: Optional[str] = None
     morada: Optional[str] = None
     clinica: ClinicaMinimalResponse
+    total_consultas: int = 0
+    planos_ativos: int = 0
+    tem_ficha_clinica: bool = False
+    proxima_consulta: Optional[ConsultaMinimalResponse] = None
 
     class Config:
         orm_mode = True
+
+
