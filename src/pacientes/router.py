@@ -239,3 +239,27 @@ def atualizar_plano(
     utilizador_atual: Utilizador = Depends(get_current_user),
 ):
     return service.atualizar_plano(db, plano_id, dados, utilizador_atual.id)
+
+
+@router.get("/planos/{paciente_id}/plano-ativo", response_model=schemas.PlanoTratamentoDetailResponse)
+def get_plano_ativo(
+    paciente_id: int,
+    db: Session = Depends(get_db),
+    utilizador_atual: Utilizador = Depends(get_current_user),
+):
+    """
+    Obtém o plano de tratamento ativo para um paciente específico.
+    """
+    # Verificar se o paciente existe
+    paciente = service.obter_paciente(db, paciente_id)
+    
+    # Obter o plano ativo
+    plano = service.obter_plano_ativo(db, paciente_id)
+    
+    if not plano:
+        raise HTTPException(
+            status_code=404, 
+            detail="Não foi encontrado um plano de tratamento ativo para este paciente."
+        )
+    
+    return plano

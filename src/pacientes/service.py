@@ -481,3 +481,24 @@ def atualizar_plano(
         f"Plano de tratamento {plano_id} atualizado."
     )
     return plano
+
+
+
+def obter_plano_ativo(db: Session, paciente_id: int) -> Optional[models.PlanoTratamento]:
+    """
+    Obtém o plano de tratamento ativo (em_curso) para um determinado paciente.
+    Retorna None se não houver plano ativo.
+    """
+    return (
+        db.query(models.PlanoTratamento)
+          .options(
+              selectinload(models.PlanoTratamento.itens)
+                .selectinload(models.PlanoItem.artigo)
+          )
+          .filter(
+              models.PlanoTratamento.paciente_id == paciente_id,
+              models.PlanoTratamento.estado == "em_curso"
+          )
+          .order_by(models.PlanoTratamento.data_criacao.desc())  # Obtém o mais recente
+          .first()
+    )
