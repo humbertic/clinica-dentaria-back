@@ -72,6 +72,7 @@ def create_orcamento(db: Session, data: OrcamentoCreate) -> Orcamento:
 def get_orcamento(db: Session, orc_id: int) -> Orcamento:
     orc = db.query(Orcamento).options(
         joinedload(Orcamento.paciente),
+        joinedload(Orcamento.entidade),
         joinedload(Orcamento.itens).joinedload(OrcamentoItem.artigo),
     ).filter(Orcamento.id == orc_id).first()
     if not orc:
@@ -91,6 +92,7 @@ def list_orcamentos(
     """Lista orçamentos com filtros opcionais."""
     q = db.query(Orcamento).options(
         joinedload(Orcamento.paciente),
+        joinedload(Orcamento.entidade),
         joinedload(Orcamento.itens).joinedload(OrcamentoItem.artigo),
     )
     # Aplicar os filtros

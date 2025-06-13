@@ -4,6 +4,7 @@ from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+from src.entidades.schemas import EntidadeResponse
 from src.pacientes.schemas import PacienteMinimalResponse
 from src.artigos.schemas import ArtigoMinimal
 
@@ -74,6 +75,7 @@ class OrcamentoRead(OrcamentoBase):
     total_paciente: Decimal
     itens: List[OrcamentoItemRead] = []
     paciente: PacienteMinimalResponse
+    entidade: Optional[EntidadeResponse] = None
 
 
 class OrcamentoUpdateEstado(BaseModel):
