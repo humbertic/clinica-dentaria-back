@@ -6,6 +6,7 @@ from src.database import SessionLocal
 from src.utilizadores.dependencies import get_current_user
 from src.utilizadores.utils import is_master_admin
 from src.utilizadores.models import Utilizador
+from src.consultas.schemas import ConsultaItemRead
 
 from . import service, schemas, models, template
 from fastapi.responses import JSONResponse,FileResponse
@@ -240,6 +241,14 @@ def atualizar_plano(
 ):
     return service.atualizar_plano(db, plano_id, dados, utilizador_atual.id)
 
+@router.post("/planos/itens/{plano_item_id}/start", response_model=ConsultaItemRead)
+def start_procedimento(
+    plano_item_id: int,
+    consulta_id: int,
+    db: Session = Depends(get_db),
+    utilizador_atual: Utilizador = Depends(get_current_user),
+):
+    return service.start_procedimento_from_plano(db, plano_item_id, consulta_id)
 
 @router.get("/planos/{paciente_id}/plano-ativo", response_model=schemas.PlanoTratamentoDetailResponse)
 def get_plano_ativo(

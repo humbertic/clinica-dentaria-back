@@ -4,6 +4,7 @@ from typing import List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
+from src.precos.models import Preco
 from src.pacientes import models, schemas
 from src.auditoria.utils import registrar_auditoria
 from sqlalchemy import func
@@ -502,3 +503,111 @@ def obter_plano_ativo(db: Session, paciente_id: int) -> Optional[models.PlanoTra
           .order_by(models.PlanoTratamento.data_criacao.desc())  # Obtém o mais recente
           .first()
     )
+
+
+def start_procedimento_from_plano(
+    db: Session,
+    plano_item_id: int,
+    consulta_id: int
+) -> ConsultaItem:
+    """
+    Starts a procedure from a treatment plan by:
+    1. Updating the status of the PlanoItem to 'em_andamento'
+    2. Creating a ConsultaItem in the current consultation with properties from PlanoItem
+    3. If all items are completed, also marks the entire plan as completed
+    
+    Args:
+        db: Database session
+        plano_item_id: ID of the PlanoItem to start
+        consulta_id: ID of the current Consulta where the procedure will be performed
+        
+    Returns:
+        The created ConsultaItem
+        
+    Raises:
+        HTTPException: If item or consultation not found, or if invalid state
+    """
+    plano_item = db.query(models.PlanoItem).filter_by(id=plano_item_id).first()
+    if not plano_item:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Item do plano de tratamento com ID={plano_item_id} não encontrado."
+        )
+    
+    if plano_item.estado in ("concluido", "cancelado"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Este procedimento já está {plano_item.estado} e não pode ser iniciado."
+        )
+    
+    consulta = db.query(Consulta).filter_by(id=consulta_id).first()
+    if not consulta:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Consulta com ID={consulta_id} não encontrada."
+        )
+    
+    if consulta.estado not in ("iniciada", "em_andamento"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"A consulta está {consulta.estado} e não permite adicionar procedimentos."
+        )
+    
+    preco = (
+        db.query(Preco)
+          .filter_by(
+              artigo_id=plano_item.artigo_id,
+              entidade_id=consulta.entidade_id
+          )
+          .first()
+    )
+    
+    if not preco:
+        raise HTTPException(
+            status_code=500,
+            detail="Preço para este artigo e entidade não encontrado."
+        )
+    
+    valor_unit = float(preco.valor_paciente)
+    quantidade = 1
+    total = quantidade * valor_unit
+    
+    consulta_item = ConsultaItem(
+        consulta_id=consulta.id,
+        artigo_id=plano_item.artigo_id,
+        quantidade=quantidade,
+        preco_unitario=valor_unit,
+        total=total,
+        numero_dente=plano_item.numero_dente,
+        face=plano_item.face,
+    )
+    
+    plano_item.estado = "concluido"
+    plano_item.quantidade_executada += 1
+    
+    plano = db.query(models.PlanoTratamento).filter_by(id=plano_item.plano_id).first()
+    
+    all_items_completed = True
+    for item in plano.itens:
+        if item.estado != "concluido" and item.estado != "cancelado":
+            all_items_completed = False
+            break
+    
+    if all_items_completed and plano.estado != "concluido":
+        plano.estado = "concluido"
+        plano.data_conclusao = datetime.now()
+        
+        registrar_auditoria(
+            db,
+            consulta.medico_id, 
+            "Conclusão",
+            "PlanoTratamento",
+            plano.id,
+            f"Plano de tratamento {plano.id} concluído automaticamente."
+        )
+    
+    db.add(consulta_item)
+    db.commit()
+    db.refresh(consulta_item)
+    
+    return consulta_item
