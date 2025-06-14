@@ -49,6 +49,11 @@ class Consulta(Base):
     medico     = relationship("Utilizador", foreign_keys=[medico_id])
     entidade   = relationship("Entidade", foreign_keys=[entidade_id])
     itens      = relationship("ConsultaItem", back_populates="consulta")
+    faturas    = relationship(
+        "Fatura", 
+        back_populates="consulta",
+        cascade="all, delete-orphan"
+    )
 
 
 class ConsultaItem(Base):

@@ -68,6 +68,11 @@ class Paciente(Base):
         back_populates="paciente",
         lazy="select"
     )
+    faturas = relationship(
+        "Fatura",
+        back_populates="paciente",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:  # type: ignore[override]
         return f"<Paciente {self.id} - {self.nome}>"
@@ -175,7 +180,12 @@ class PlanoTratamento(Base):
 
     paciente = relationship("Paciente", back_populates="planos")
     itens    = relationship("PlanoItem", back_populates="plano", cascade="all, delete-orphan")
-
+    faturas = relationship(
+        "Fatura",
+        back_populates="plano",
+        cascade="all, delete-orphan",
+        uselist=False  # cada plano só pode ter uma fatura associada
+    )
 
 # ---------- LIGAÇÃO CONSULTA <-> PLANO ----------
 # class ConsultaPlanoTratamento(Base):
