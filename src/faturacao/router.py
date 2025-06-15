@@ -76,8 +76,15 @@ def definir_parcelas(
 @router.post("/parcelas/{parcela_id}/pagamento", response_model=schemas.ParcelaRead, summary="Registar pagamento de parcela")
 def pagar_parcela(
     parcela_id: int,
-    valor_pago: float,
+    pagamento: schemas.ParcelaPagamentoRequest,
     db: Session = Depends(get_db),
     utilizador: Utilizador = Depends(get_current_user),
 ):
-    return service.pay_parcela(db, parcela_id, valor_pago)
+    return service.pay_parcela(
+        db=db,
+        parcela_id=parcela_id,
+        valor_pago=pagamento.valor_pago,
+        metodo_pagamento=pagamento.metodo_pagamento,
+        data_pagamento=pagamento.data_pagamento,
+        observacoes=pagamento.observacoes if hasattr(pagamento, 'observacoes') else None
+    )

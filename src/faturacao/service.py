@@ -104,6 +104,11 @@ def create_fatura(
         # Todos os ConsultaItem da consulta
         items = db.query(ConsultaItem).filter(ConsultaItem.consulta_id == payload.consulta_id).all()
         for ci in items:
+            descricao = None
+            if ci.artigo:
+                descricao = ci.artigo.descricao
+            else:
+                descricao = f"Procedimento #{ci.id}"
             fi = FaturaItem(
                 fatura_id      = fatura.id,
                 origem_tipo    = "consulta_item",
@@ -111,6 +116,7 @@ def create_fatura(
                 quantidade     = ci.quantidade,
                 preco_unitario = float(ci.preco_unitario),
                 total          = float(ci.total),
+                descricao      = descricao
             )
             db.add(fi)
             total += float(ci.total)
@@ -121,6 +127,12 @@ def create_fatura(
             oi = db.get(OrcamentoItem, pi.orcamento_item_id)
             if not oi:
                 continue  # ignora itens sem orcamento associado
+            descricao = None
+            if oi.artigo:
+                descricao = oi.artigo.descricao
+            else:
+                descricao = f"Procedimento #{pi.id}"
+
             valor_unit = float(oi.preco_paciente)
             qtd = pi.quantidade_prevista
             fi = FaturaItem(
@@ -130,6 +142,7 @@ def create_fatura(
                 quantidade     = qtd,
                 preco_unitario = valor_unit,
                 total          = qtd * valor_unit,
+                descricao      = descricao
             )
             db.add(fi)
             total += qtd * valor_unit
@@ -238,7 +251,9 @@ def pay_parcela(
     db: Session,
     parcela_id: int,
     valor_pago: float,
-    data_pagamento: Optional[datetime] = None
+    metodo_pagamento: str,
+    data_pagamento: Optional[datetime] = None,
+    observacoes: Optional[str] = None
 ) -> ParcelaPagamento:
     parc = db.get(ParcelaPagamento, parcela_id)
     if not parc:
@@ -247,10 +262,11 @@ def pay_parcela(
             f"Parcela com ID={parcela_id} não encontrada"
         )
 
-    # 1) atualizar valor pago e data
-    parc.valor_pago     = valor_pago
+    # 1) atualizar valor pago, método e data
+    parc.valor_pago = valor_pago
     parc.data_pagamento = data_pagamento or datetime.utcnow()
-
+    parc.metodo_pagamento = metodo_pagamento
+    
     # 2) determinar estado da parcela
     if valor_pago >= float(parc.valor_planejado):
         parc.estado = ParcelaEstado.paga

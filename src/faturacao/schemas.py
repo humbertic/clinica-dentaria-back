@@ -22,6 +22,13 @@ class ParcelaEstado(str, enum.Enum):
     paga     = "paga"
 
 
+class MetodoPagamento(str, enum.Enum):
+    dinheiro = "dinheiro"
+    cartao   = "cartao"
+    transferencia = "transferencia"
+    
+
+
 # -------------------- Fatura --------------------
 
 class FaturaBase(BaseModel):
@@ -40,7 +47,7 @@ class FaturaItemBase(BaseModel):
     origem_id:      int             = Field(..., description="ID do item de origem")
     quantidade:     Optional[int]   = Field(1, description="Número de unidades")
     preco_unitario: float           = Field(..., description="Preço unitário para este item")
-
+    descricao:      Optional[str]   = Field(None, description="Descrição do item (opcional)")
 
 class FaturaItemCreate(FaturaItemBase):
     pass
@@ -63,14 +70,22 @@ class ParcelaRead(ParcelaBase):
     valor_pago:      Optional[float]       = Field(None, description="Valor realmente pago")
     data_pagamento:  Optional[datetime]    = Field(None, description="Quando foi pago")
     estado:          ParcelaEstado
+    metodo_pagamento: Optional[MetodoPagamento] = Field(None, description="Método de pagamento utilizado")
 
     class Config:
         orm_mode = True
 
 
+class ParcelaPagamentoRequest(BaseModel):
+    valor_pago: float = Field(..., description="Valor sendo pago")
+    metodo_pagamento: MetodoPagamento = Field(..., description="Método de pagamento")
+    data_pagamento: Optional[datetime] = Field(None, description="Data do pagamento (padrão: agora)")
+
+
 class FaturaItemRead(FaturaItemBase):
     id:    int    = Field(..., description="ID do item de fatura")
     total: float  = Field(..., description="quantidade × preço_unitario")
+    descricao: str = Field("Item sem descrição", description="Descrição do procedimento ou artigo")
 
     class Config:
         orm_mode = True

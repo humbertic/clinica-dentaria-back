@@ -1,6 +1,6 @@
 import enum
 from sqlalchemy import (
-    Column, Integer, Numeric, DateTime, ForeignKey, String, Enum as SAEnum, func
+    Column, Integer, Numeric, DateTime, ForeignKey, String, Enum as SAEnum, func, CheckConstraint
 )
 from sqlalchemy.orm import relationship
 from src.database import Base
@@ -22,6 +22,9 @@ class ParcelaEstado(enum.Enum):
     pendente = "pendente"
     parcial  = "parcial"
     paga     = "paga"
+
+
+
 
 
 class Fatura(Base):
@@ -59,6 +62,7 @@ class FaturaItem(Base):
     quantidade     = Column(Integer, nullable=False, default=1)
     preco_unitario = Column(Numeric(10,2), nullable=False)
     total          = Column(Numeric(12,2), nullable=False)
+    descricao      = Column(String(255), nullable=False)
 
     fatura         = relationship("Fatura", back_populates="itens")
 
@@ -75,5 +79,12 @@ class ParcelaPagamento(Base):
     valor_pago      = Column(Numeric(12,2), nullable=True)
     data_pagamento  = Column(DateTime(timezone=True), nullable=True)
     estado          = Column(SAEnum(ParcelaEstado), nullable=False, default=ParcelaEstado.pendente)
+
+    metodo_pagamento = Column(
+        String(20),  # Use String type instead of enum
+        CheckConstraint("metodo_pagamento IN ('dinheiro', 'cartao', 'transferencia')"),
+        nullable=True,
+        comment="Como foi pago: dinheiro, cartão, transferência, pix, boleto…"
+    )
 
     fatura          = relationship("Fatura", back_populates="parcelas")
