@@ -1,13 +1,15 @@
 from datetime import datetime
 from typing import List, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from src.orcamento.models import OrcamentoItem
+from src.orcamento.models import EstadoOrc, Orcamento, OrcamentoItem
 from src.faturacao.models import (
     Fatura,
     FaturaItem,
+    FaturaPagamento,
     ParcelaPagamento,
     FaturaTipo,
     FaturaEstado,
@@ -16,6 +18,7 @@ from src.faturacao.models import (
 from src.faturacao.schemas import (
     FaturaCreate,
     FaturaItemCreate,
+    MetodoPagamento,
     ParcelaCreate,
 )
 from src.pacientes.models import Paciente, PlanoTratamento
@@ -53,6 +56,7 @@ def create_fatura(
     payload: FaturaCreate
 ) -> Fatura:
     # 1) validar paciente
+
     paciente = db.get(Paciente, payload.paciente_id)
     if not paciente:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Paciente não encontrado")
@@ -60,19 +64,25 @@ def create_fatura(
     # 2) validar campos por tipo e obter origem
     consulta = None
     plano = None
-    if payload.tipo == FaturaTipo.consulta:
+    if payload.tipo == FaturaTipo.consulta.value:
+        # fatura de consulta: CONSULTA_ID obrigatório, PLANO_ID deve ser None
+        if payload.consulta_id is None:
+            raise HTTPException(400, "Deves enviar consulta_id para fatura de consulta")
         if payload.plano_id is not None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fatura de consulta não pode ter plano_id")
+            raise HTTPException(400, "Fatura de consulta não pode ter plano_id")
         consulta = db.get(Consulta, payload.consulta_id)
-        if not payload.consulta_id or not consulta:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Consulta não encontrada para faturar")
-    else:
-        # tipo plano
+        if not consulta:
+            raise HTTPException(404, "Consulta não encontrada")
+    elif payload.tipo == FaturaTipo.plano.value:
+        # fatura de plano: PLANO_ID obrigatório, CONSULTA_ID deve ser None
+        if payload.plano_id is None:
+            raise HTTPException(400, "Deves enviar plano_id para fatura de plano")
         if payload.consulta_id is not None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fatura de plano não pode ter consulta_id")
+            raise HTTPException(400, "Fatura de plano não pode ter consulta_id")
         plano = db.get(PlanoTratamento, payload.plano_id)
-        if not payload.plano_id or not plano:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Plano de tratamento não encontrado para faturar")
+        if not plano:
+            raise HTTPException(404, "Plano de tratamento não encontrado")
+    
 
         # 2.1) evitar geração duplicada de fatura de plano
         existing = (
@@ -84,7 +94,12 @@ def create_fatura(
         if existing:
             # Já existe fatura de plano em aberto, retorna esta
             return existing
-
+    else:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, 
+            f"Tipo de fatura inválido: {payload.tipo}"
+        )
+ 
     # 3) criar fatura inicial
     fatura = Fatura(
         paciente_id = payload.paciente_id,
@@ -100,15 +115,15 @@ def create_fatura(
 
     # 4) gerar itens automaticamente
     total = 0
-    if payload.tipo == FaturaTipo.consulta:
-        # Todos os ConsultaItem da consulta
-        items = db.query(ConsultaItem).filter(ConsultaItem.consulta_id == payload.consulta_id).all()
-        for ci in items:
-            descricao = None
-            if ci.artigo:
-                descricao = ci.artigo.descricao
-            else:
-                descricao = f"Procedimento #{ci.id}"
+
+    if payload.tipo == FaturaTipo.consulta.value:
+        itens = (
+            db.query(ConsultaItem)
+            .filter(ConsultaItem.consulta_id == payload.consulta_id)
+            .all()
+        )
+        for ci in itens:
+            descricao = ci.artigo.descricao if ci.artigo else f"Procedimento #{ci.id}"
             fi = FaturaItem(
                 fatura_id      = fatura.id,
                 origem_tipo    = "consulta_item",
@@ -120,8 +135,24 @@ def create_fatura(
             )
             db.add(fi)
             total += float(ci.total)
-    else:
-        # Todos os PlanoItem do plano aprovado (independentemente de estado)
+
+    elif payload.tipo == FaturaTipo.plano.value:
+        # 1) buscamos o último orçamento aprovado deste paciente
+        orc = (
+            db.query(Orcamento)
+            .filter(Orcamento.paciente_id == payload.paciente_id)
+            .filter(Orcamento.estado == EstadoOrc.aprovado)
+            .order_by(Orcamento.data.desc())
+            .first()
+        )
+        if not orc:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                "Não existe orçamento aprovado para este paciente"
+            )
+
+        # 2) iteramos sobre os OrcamentoItem desse orçamento
+        total = 0
         for pi in plano.itens:
             # obter preço e quantidade inicialmente aprovados
             oi = db.get(OrcamentoItem, pi.orcamento_item_id)
@@ -146,6 +177,14 @@ def create_fatura(
             )
             db.add(fi)
             total += qtd * valor_unit
+
+    else:
+        # se alguém invocar com um tipo estranho…
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Tipo de fatura inválido: {payload.tipo}"
+        )
+
 
     # 5) atualizar total da fatura
     fatura.total = total
@@ -289,3 +328,74 @@ def pay_parcela(
     db.commit()
     db.refresh(parc)
     return parc
+
+
+def pay_fatura_direto(
+    db: Session,
+    fatura_id: int,
+    valor_pago: float,
+    metodo_pagamento: MetodoPagamento,
+    data_pagamento: Optional[datetime] = None,
+    observacoes: Optional[str] = None
+) -> Fatura:
+    """
+    Process a direct payment to an invoice without going through parcelas.
+    
+    For invoices without installment plans, this creates a single payment
+    directly against the invoice.
+    """
+    # 1) Get the invoice
+    fatura = get_fatura(db, fatura_id)
+    if not fatura:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"Fatura com ID={fatura_id} não encontrada"
+        )
+    
+    # 2) Check if invoice can receive payments
+    if fatura.estado == FaturaEstado.cancelada:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Não é possível pagar uma fatura cancelada"
+        )
+    
+    if fatura.estado == FaturaEstado.paga:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Esta fatura já está totalmente paga"
+        )
+    
+    # 3) For invoice with parcelas, redirect to parcela payment
+    if fatura.parcelas:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Esta fatura tem parcelas definidas. Faça o pagamento através de uma parcela específica."
+        )
+    
+    # 4) Set payment date if not provided
+    effective_date = data_pagamento or datetime.utcnow()
+    
+    # 5) Create a payment record 
+    pagamento = FaturaPagamento(
+        fatura_id=fatura_id,
+        valor=valor_pago,
+        data_pagamento=effective_date,
+        metodo_pagamento=metodo_pagamento,
+        observacoes=observacoes
+    )
+    db.add(pagamento)
+    
+    # 6) Update invoice status based on the payment
+    total_pago = db.query(func.sum(FaturaPagamento.valor)).filter(
+        FaturaPagamento.fatura_id == fatura_id
+    ).scalar() or 0
+    total_pago += valor_pago  
+    
+    if total_pago >= float(fatura.total):
+        fatura.estado = FaturaEstado.paga
+    elif total_pago > 0:
+        fatura.estado = FaturaEstado.parcial
+    
+    db.commit()
+    db.refresh(fatura)
+    return fatura

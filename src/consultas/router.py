@@ -103,7 +103,7 @@ def atualizar_consulta(
     """
     Atualiza apenas os campos fornecidos na consulta.
     """
-    return service.update_consulta(db, consulta_id, changes)
+    return service.update_consulta(db, consulta_id, changes, utilizador_atual.id)
 
 
 @router.post(

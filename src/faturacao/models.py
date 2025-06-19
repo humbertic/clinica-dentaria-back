@@ -1,3 +1,4 @@
+from datetime import datetime
 import enum
 from sqlalchemy import (
     Column, Integer, Numeric, DateTime, ForeignKey, String, Enum as SAEnum, func, CheckConstraint
@@ -47,7 +48,7 @@ class Fatura(Base):
     plano        = relationship("PlanoTratamento", back_populates="faturas")
     itens        = relationship("FaturaItem", back_populates="fatura", cascade="all, delete-orphan")
     parcelas     = relationship("ParcelaPagamento", back_populates="fatura", cascade="all, delete-orphan")
-
+    pagamentos = relationship("FaturaPagamento", back_populates="fatura", cascade="all, delete-orphan")
 
 class FaturaItem(Base):
     __tablename__ = "FaturaItens"
@@ -88,3 +89,17 @@ class ParcelaPagamento(Base):
     )
 
     fatura          = relationship("Fatura", back_populates="parcelas")
+
+
+class FaturaPagamento(Base):
+    __tablename__ = "fatura_pagamentos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    fatura_id = Column(Integer, ForeignKey("Faturas.id", ondelete="CASCADE"), nullable=False)
+    valor = Column(Numeric(10, 2), nullable=False)
+    data_pagamento = Column(DateTime, nullable=False, default=datetime.utcnow)
+    metodo_pagamento = Column(String, nullable=False)
+    observacoes = Column(String, nullable=True)
+    
+    # Relationship
+    fatura = relationship("Fatura", back_populates="pagamentos")

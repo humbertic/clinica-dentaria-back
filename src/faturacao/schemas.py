@@ -91,6 +91,17 @@ class FaturaItemRead(FaturaItemBase):
         orm_mode = True
 
 
+class FaturaPagamentoRead(BaseModel):
+    id: int
+    fatura_id: int
+    valor: float
+    data_pagamento: datetime
+    metodo_pagamento: MetodoPagamento
+    observacoes: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
 class FaturaRead(FaturaBase):
     id:           int
     data_emissao: datetime           = Field(..., description="Quando a fatura foi emitida")
@@ -99,6 +110,7 @@ class FaturaRead(FaturaBase):
 
     itens:    List[FaturaItemRead]   = []
     parcelas: List[ParcelaRead]      = []
+    pagamentos: List[FaturaPagamentoRead] = []
 
     class Config:
         orm_mode = True

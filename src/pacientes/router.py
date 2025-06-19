@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, Form, UploadFile, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -249,6 +249,43 @@ def start_procedimento(
     utilizador_atual: Utilizador = Depends(get_current_user),
 ):
     return service.start_procedimento_from_plano(db, plano_item_id, consulta_id)
+
+@router.get("/planos/completed", response_model=List[schemas.PlanoTratamentoDetailResponse])
+def get_recently_completed_plans(
+    paciente_id: int,
+    hours: int = Query(1, description="How many hours back to look for completed plans"),
+    db: Session = Depends(get_db),
+    current_user: Utilizador = Depends(get_current_user)
+):
+    """
+    Get plans that were recently completed for a patient
+    """
+    # Get raw results from service
+    raw_results = service.get_recently_completed_plans(
+        db=db, 
+        paciente_id=paciente_id,
+        hours=hours
+    )
+    
+    # Debug information
+    print(f"Raw results type: {type(raw_results)}")
+    print(f"Raw results: {raw_results}")
+    
+    # Ensure we have proper model instances
+    if not raw_results:
+        return []
+    
+  
+    from src.pacientes.schemas import PlanoTratamentoDetailResponse
+    response_data = []
+    for plan in raw_results:
+        try:
+            plan_data = PlanoTratamentoDetailResponse.from_orm(plan)
+            response_data.append(plan_data)
+        except Exception as e:
+            print(f"Error converting plan to response model: {e}")
+    
+    return response_data
 
 @router.get("/planos/{paciente_id}/plano-ativo", response_model=schemas.PlanoTratamentoDetailResponse)
 def get_plano_ativo(

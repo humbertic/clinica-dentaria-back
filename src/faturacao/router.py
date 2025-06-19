@@ -88,3 +88,23 @@ def pagar_parcela(
         data_pagamento=pagamento.data_pagamento,
         observacoes=pagamento.observacoes if hasattr(pagamento, 'observacoes') else None
     )
+
+
+@router.post("/{fatura_id}/pagamento-direto", response_model=schemas.FaturaRead)
+def pagar_fatura_direto(
+    fatura_id: int,
+    pagamento: schemas.ParcelaPagamentoRequest,
+    db: Session = Depends(get_db),
+    utilizador: Utilizador = Depends(get_current_user),
+):
+    """
+    Process a direct payment to an invoice without parcelas
+    """
+    return service.pay_fatura_direto(
+        db=db,
+        fatura_id=fatura_id,
+        valor_pago=pagamento.valor_pago,
+        metodo_pagamento=pagamento.metodo_pagamento,
+        data_pagamento=pagamento.data_pagamento,
+        observacoes=pagamento.observacoes if hasattr(pagamento, 'observacoes') else None
+    )

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import HTTPException, status
@@ -611,3 +611,32 @@ def start_procedimento_from_plano(
     db.refresh(consulta_item)
     
     return consulta_item
+
+def get_recently_completed_plans(
+    db: Session, 
+    paciente_id: int,
+    hours: int = 1
+) -> List[models.PlanoTratamento]:
+    """
+    Get treatment plans that were recently completed for a specific patient.
+    
+    Args:
+        db: Database session
+        paciente_id: ID of the patient
+        hours: How many hours back to look for completed plans (default: 1)
+        
+    Returns:
+        List of recently completed PlanoTratamento objects
+    """
+    cutoff_time = datetime.now() - timedelta(hours=hours)
+    
+    return (
+        db.query(models.PlanoTratamento)
+          .filter(
+              models.PlanoTratamento.paciente_id == paciente_id,
+              models.PlanoTratamento.estado == "concluido",
+              models.PlanoTratamento.data_conclusao >= cutoff_time
+          )
+          .order_by(models.PlanoTratamento.data_conclusao.desc())
+          .all()
+    )

@@ -235,7 +235,7 @@ class ProcedimentoHistoricoItem(BaseModel):
     artigo_id: int
     artigo_descricao: str
     numero_dente: Optional[int] = None
-    face: Optional[str] = None
+    face: Optional[List[str]] = None
     total: Optional[float] = None
     medico_id: Optional[int] = None
     medico_nome: Optional[str] = None

@@ -3,8 +3,11 @@ from sqlalchemy import func
 from fastapi import HTTPException, status
 from typing import Optional, List
 from datetime import date, datetime
+from src.marcacoes.models import Marcacao
 from src.orcamento.models import Orcamento, OrcamentoItem
 from src.consultas.models import Consulta, ConsultaItem
+from src.auditoria.utils import registrar_auditoria
+
 from src.consultas.schemas import (
     ConsultaCreate,
     ConsultaUpdate,
@@ -132,20 +135,65 @@ def create_treatment_plan_from_orcamentos(
     db.commit()
     return novo_plano.id
 
+def close_associated_marcacao(db: Session, consulta_id: int, paciente_id: int) -> Optional[Marcacao]:
+    """
+    Find and close the active appointment (marcacao) for a patient when completing a consultation.
+    
+    Args:
+        db: Database session
+        consulta_id: ID of the consultation being completed
+        paciente_id: ID of the patient
+        
+    Returns:
+        The updated Marcacao object or None if no matching appointment was found
+    """
+    marcacao = (
+        db.query(Marcacao)
+          .filter(
+              Marcacao.paciente_id == paciente_id,
+              Marcacao.estado == "iniciada"
+          )
+          .first()
+    )
+    
+    if marcacao:
+        marcacao.estado = "concluida"
+        db.commit()
+        db.refresh(marcacao)
+        
+        registrar_auditoria(
+            db,
+            utilizador_id=marcacao.medico_id,  
+            acao="Atualização",
+            objeto="Marcacao",
+            objeto_id=marcacao.id,
+            detalhes=f"Marcação #{marcacao.id} concluída ao finalizar consulta #{consulta_id}"
+        )
+        
+    return marcacao
 
-def update_consulta(
-    db: Session,
-    consulta_id: int,
-    changes: ConsultaUpdate
-) -> Consulta:
+
+def update_consulta(db: Session, consulta_id: int, data: ConsultaUpdate, utilizador_id: int) -> Consulta:
     consulta = get_consulta(db, consulta_id)
-
-    data = changes.dict(exclude_unset=True)
-    for field, val in data.items():
-        setattr(consulta, field, val)
-
+    
+    for field, value in data.dict(exclude_unset=True).items():
+        setattr(consulta, field, value)
+    
+    if data.estado == "concluida":
+        close_associated_marcacao(db, consulta_id, consulta.paciente_id)
+    
     db.commit()
     db.refresh(consulta)
+    
+    registrar_auditoria(
+        db,
+        utilizador_id,
+        "Atualização",
+        "Consulta",
+        consulta_id,
+        f"Consulta #{consulta_id} atualizada. Novo estado: {consulta.estado}"
+    )
+    
     return consulta
 
 
