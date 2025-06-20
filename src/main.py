@@ -15,6 +15,7 @@ from src.orcamento.router import router as orcamento_router
 from src.marcacoes.router import router as marcacoes_router
 from src.consultas.router import router as consultas_router
 from src.faturacao.router import router as faturacao_router
+from src.caixa.router import router as caixa_router
 
 
 
@@ -64,6 +65,7 @@ app.include_router(orcamento_router, prefix="/orcamentos", tags=["Orcamentos"])
 app.include_router(marcacoes_router)
 app.include_router(consultas_router)
 app.include_router(faturacao_router)
+app.include_router(caixa_router)
 
 
 

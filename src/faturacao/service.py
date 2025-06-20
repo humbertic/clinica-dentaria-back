@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
 from src.orcamento.models import EstadoOrc, Orcamento, OrcamentoItem
@@ -23,15 +23,29 @@ from src.faturacao.schemas import (
 )
 from src.pacientes.models import Paciente, PlanoTratamento
 from src.consultas.models import Consulta, ConsultaItem
+from decimal import Decimal
 
 
 def get_fatura(db: Session, fatura_id: int) -> Fatura:
-    f = db.get(Fatura, fatura_id)
+    """
+    Get a fatura with all related payment information using explicit joins
+    """
+    # Query with explicit eager loading of all payment-related relationships
+    f = (db.query(Fatura)
+         .options(
+             joinedload(Fatura.pagamentos),
+             joinedload(Fatura.parcelas),
+             joinedload(Fatura.itens)
+         )
+         .filter(Fatura.id == fatura_id)
+         .first())
+    
     if not f:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
             f"Fatura com ID={fatura_id} não encontrada"
         )
+    
     return f
 
 
@@ -316,7 +330,7 @@ def pay_parcela(
 
     # 3) atualizar estado da fatura
     fatura = parc.fatura
-    soma_pago = sum(p.valor_pago or 0 for p in fatura.parcelas)
+    soma_pago = sum(Decimal(p.valor_pago or 0) for p in fatura.parcelas)
 
     if soma_pago >= float(fatura.total):
         fatura.estado = FaturaEstado.paga

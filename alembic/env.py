@@ -27,6 +27,7 @@ from src.orcamento import models as orcamento_models
 from src.marcacoes import models as marcacoes_models
 from src.consultas import models as consultas_models
 from src.faturacao import models as faturacao_models
+from src.caixa import models as caixa_models
 
 # Carrega a config do .ini
 config = context.config

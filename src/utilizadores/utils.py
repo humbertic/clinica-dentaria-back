@@ -20,3 +20,11 @@ def is_master_admin(utilizador: models.Utilizador) -> bool:
         if perfil and perfil.nome == "Master Admin":
             return True
     return False
+
+def is_frontdesk(utilizador: models.Utilizador) -> bool:
+    for utilizador_clinica in utilizador.perfis:
+        # You need to load the related Perfil object
+        perfil = getattr(utilizador_clinica, "perfil", None)
+        if perfil and perfil.nome == "Funcionário de Atendimento":
+            return True
+    return False

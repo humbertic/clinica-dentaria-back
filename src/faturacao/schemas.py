@@ -73,7 +73,7 @@ class ParcelaRead(ParcelaBase):
     metodo_pagamento: Optional[MetodoPagamento] = Field(None, description="Método de pagamento utilizado")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ParcelaPagamentoRequest(BaseModel):
@@ -88,7 +88,7 @@ class FaturaItemRead(FaturaItemBase):
     descricao: str = Field("Item sem descrição", description="Descrição do procedimento ou artigo")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class FaturaPagamentoRead(BaseModel):
@@ -113,4 +113,4 @@ class FaturaRead(FaturaBase):
     pagamentos: List[FaturaPagamentoRead] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

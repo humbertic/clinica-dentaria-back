@@ -629,7 +629,8 @@ def get_recently_completed_plans(
         List of recently completed PlanoTratamento objects
     """
     cutoff_time = datetime.now() - timedelta(hours=hours)
-    
+    print(f"Cutoff time for completed plans: {cutoff_time.isoformat()}")
+    print(f"Searching for completed plans for patient ID={paciente_id} since {cutoff_time.isoformat()}")
     return (
         db.query(models.PlanoTratamento)
           .filter(

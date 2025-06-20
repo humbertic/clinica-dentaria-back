@@ -222,10 +222,11 @@ class PlanoItemResponse(BaseModel):
 class PlanoTratamentoDetailResponse(PlanoTratamentoResponse):
     data_criacao: datetime
     data_conclusao: Optional[datetime] = None
+    descricao: Optional[str] = None
     itens: List[PlanoItemResponse] = []
     
     class Config:
-        orm_mode = True
+        from_attributes = True 
 
 
 class ProcedimentoHistoricoItem(BaseModel):

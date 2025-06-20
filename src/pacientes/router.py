@@ -267,23 +267,43 @@ def get_recently_completed_plans(
         hours=hours
     )
     
-    # Debug information
-    print(f"Raw results type: {type(raw_results)}")
-    print(f"Raw results: {raw_results}")
-    
-    # Ensure we have proper model instances
     if not raw_results:
         return []
     
-  
-    from src.pacientes.schemas import PlanoTratamentoDetailResponse
     response_data = []
     for plan in raw_results:
         try:
-            plan_data = PlanoTratamentoDetailResponse.from_orm(plan)
-            response_data.append(plan_data)
+            # Convert plan to dict
+            plan_dict = {
+                "id": plan.id,
+                "paciente_id": plan.paciente_id,
+                "estado": plan.estado,
+                "data_criacao": plan.data_criacao,
+                "data_conclusao": plan.data_conclusao,
+                "descricao": getattr(plan, "descricao", ""), 
+            }
+            
+            # Convert items
+            items = []
+            if hasattr(plan, "itens") and plan.itens:
+                for item in plan.itens:
+                    item_dict = {
+                        "id": item.id,
+                        "plano_id": item.plano_id,
+                        "artigo_id": item.artigo_id,
+                        "quantidade_prevista": item.quantidade_prevista,
+                        "quantidade_executada": getattr(item, "quantidade_executada", 0),
+                        "estado": item.estado,
+                        "numero_dente": getattr(item, "numero_dente", None),
+                        "face": getattr(item, "face", None),
+                    }
+                    items.append(item_dict)
+            
+            plan_dict["itens"] = items
+            response_data.append(plan_dict)
+            
         except Exception as e:
-            print(f"Error converting plan to response model: {e}")
+            print(f"Error converting plan to dict: {e}")
     
     return response_data
 
