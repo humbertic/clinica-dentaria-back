@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Any, Dict, List
 
 from src.database import SessionLocal
 from src.utilizadores.dependencies import get_current_user
@@ -26,7 +26,7 @@ def frontoffice_only(user: Utilizador = Depends(get_current_user)):
         )
     return user
 
-@router.get("", response_model=schemas.CaixaSessionRead)
+@router.get("", response_model=Dict[str, Any])
 def get_open_session(db: Session = Depends(get_db)):
     sess = service.fetch_open_session(db)
     if not sess:

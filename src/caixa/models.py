@@ -4,6 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from src.database import Base
+from src.comuns.enums import MetodoPagamento
 
 class CaixaStatus(enum.Enum):
     aberto = "aberto"
@@ -31,7 +32,7 @@ class CashierPayment(Base):
     fatura_id        = Column(Integer, ForeignKey("Faturas.id"), nullable=True)
     parcela_id       = Column(Integer, ForeignKey("ParcelasPagamento.id"), nullable=True)
     valor_pago       = Column(Numeric(12,2), nullable=False)
-    metodo_pagamento = Column(String(50), nullable=False)
+    metodo_pagamento = Column(SAEnum(MetodoPagamento), nullable=True)
     data_pagamento   = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     observacoes      = Column(Text, nullable=True)
     operador_id      = Column(Integer, ForeignKey("Utilizador.id"), nullable=False)

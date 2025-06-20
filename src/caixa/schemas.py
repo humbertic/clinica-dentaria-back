@@ -1,11 +1,21 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List
+from typing import Dict, Optional, List
 from pydantic import BaseModel, Field
 
 class CaixaStatus(str, Enum):
     aberto = "aberto"
     fechado = "fechado"
+
+class PaymentMethodTotal(BaseModel):
+    count: int
+    total: float
+
+class PaymentSummary(BaseModel):
+    count: int
+    total: float
+    by_method: Dict[str, PaymentMethodTotal]
+
 
 class CaixaSessionBase(BaseModel):
     operador_id:   int     = Field(..., description="ID do utilizador (front-office)")
@@ -24,6 +34,13 @@ class CaixaSessionRead(CaixaSessionBase):
     class Config:
         orm_mode = True
 
+class SessionWithPayments(BaseModel):
+    session: CaixaSessionRead
+    payments: PaymentSummary
+    
+    class Config:
+        orm_mode = True
+
 class PendingInvoice(BaseModel):
     id:            int
     paciente_nome: str
@@ -34,6 +51,7 @@ class PendingInvoice(BaseModel):
 
 class PendingParcela(BaseModel):
     parcela_id:    int
+    paciente_nome: str
     fatura_id:     int
     numero:        int
     valor:         float

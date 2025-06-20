@@ -5,6 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from src.database import Base
+from src.comuns.enums import MetodoPagamento
 
 
 class FaturaTipo(enum.Enum):
@@ -23,8 +24,6 @@ class ParcelaEstado(enum.Enum):
     pendente = "pendente"
     parcial  = "parcial"
     paga     = "paga"
-
-
 
 
 
@@ -81,12 +80,7 @@ class ParcelaPagamento(Base):
     data_pagamento  = Column(DateTime(timezone=True), nullable=True)
     estado          = Column(SAEnum(ParcelaEstado), nullable=False, default=ParcelaEstado.pendente)
 
-    metodo_pagamento = Column(
-        String(20),  # Use String type instead of enum
-        CheckConstraint("metodo_pagamento IN ('dinheiro', 'cartao', 'transferencia')"),
-        nullable=True,
-        comment="Como foi pago: dinheiro, cartão, transferência, pix, boleto…"
-    )
+    metodo_pagamento = Column(SAEnum(MetodoPagamento), nullable=True)
 
     fatura          = relationship("Fatura", back_populates="parcelas")
 
@@ -98,7 +92,7 @@ class FaturaPagamento(Base):
     fatura_id = Column(Integer, ForeignKey("Faturas.id", ondelete="CASCADE"), nullable=False)
     valor = Column(Numeric(10, 2), nullable=False)
     data_pagamento = Column(DateTime, nullable=False, default=datetime.utcnow)
-    metodo_pagamento = Column(String, nullable=False)
+    metodo_pagamento = Column(SAEnum(MetodoPagamento), nullable=False)
     observacoes = Column(String, nullable=True)
     
     # Relationship
