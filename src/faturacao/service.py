@@ -102,11 +102,12 @@ def create_fatura(
         existing = (
             db.query(Fatura)
               .filter(Fatura.plano_id == payload.plano_id)
-              .filter(Fatura.estado.in_([FaturaEstado.pendente, FaturaEstado.parcial]))
+              .filter()
               .first()
         )
         if existing:
             # Já existe fatura de plano em aberto, retorna esta
+            print(f"Fatura já existe para o plano {payload.plano_id}, estado: {existing.estado}")
             return existing
     else:
         raise HTTPException(

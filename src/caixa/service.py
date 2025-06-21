@@ -184,7 +184,7 @@ def register_payment(
             fatura_id=payload.fatura_id,
             parcela_id=payload.parcela_id,
             valor_pago=payload.valor_pago,
-            metodo_pagamento=metodo,
+            metodo_pagamento=metodo.value,
             data_pagamento=payload.data_pagamento or datetime.utcnow(),
             observacoes=payload.observacoes
         )
@@ -198,7 +198,7 @@ def register_payment(
             parcela.valor_pago = (parcela.valor_pago or 0) + payload.valor_pago
             parcela.data_pagamento = payload.data_pagamento or datetime.utcnow()
             parcela.estado = ParcelaEstado.paga if parcela.valor_pago >= parcela.valor_planejado else ParcelaEstado.parcial
-            parcela.metodo_pagamento = metodo  # Sync payment method with cashier payment
+            parcela.metodo_pagamento = metodo.value  # Sync payment method with cashier payment
             
             # Update parent invoice state if needed
             update_fatura_state(db, parcela.fatura_id)
@@ -214,7 +214,7 @@ def register_payment(
                 fatura_id=fatura.id,
                 valor=payload.valor_pago,
                 data_pagamento=payload.data_pagamento or datetime.utcnow(),
-                metodo_pagamento=metodo,  # Sync payment method
+                metodo_pagamento=metodo.value,  # Sync payment method
                 observacoes=payload.observacoes
             )
             db.add(fatura_payment)

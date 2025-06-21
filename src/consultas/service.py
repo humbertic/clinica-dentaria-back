@@ -62,15 +62,18 @@ def create_consulta(
     db.commit()
     db.refresh(consulta)
     
-    # 3) Verificar se existe um plano de tratamento para o paciente
-    plano_existente = (
+    # 3) Verificar se existe um plano de tratamento ATIVO para o paciente
+    plano_ativo = (
         db.query(PlanoTratamento)
-        .filter(PlanoTratamento.paciente_id == payload.paciente_id)
+        .filter(
+            PlanoTratamento.paciente_id == payload.paciente_id,
+            PlanoTratamento.estado == "em_curso"  # Apenas planos ativos
+        )
         .first()
     )
     
-    # 4) Se não existir plano, verificar se há orçamentos aprovados
-    if not plano_existente:
+    # 4) Se não existir plano ativo, verificar se há orçamentos aprovados
+    if not plano_ativo:
         create_treatment_plan_from_orcamentos(db, payload.paciente_id)
     
     return consulta
@@ -89,17 +92,37 @@ def create_treatment_plan_from_orcamentos(
     Returns:
         The ID of the created plan, or None if no plan was created
     """
-    # Find approved orcamentos for this patient
+    # Find approved orcamentos for this patient that aren't already in a plan
     orcamentos_aprovados = (
         db.query(Orcamento)
         .filter(
             Orcamento.paciente_id == paciente_id,
-            Orcamento.estado == "aprovado"
+            Orcamento.estado == "aprovado",
         )
         .all()
     )
     
-    if not orcamentos_aprovados:
+    # Filter out orcamentos that already have items in a plan
+    filtered_orcamentos = []
+    for orcamento in orcamentos_aprovados:
+        # Check if any items from this orcamento are already in a plan
+        items_in_plan = (
+            db.query(OrcamentoItem)
+            .join(
+                PlanoItem, 
+                PlanoItem.orcamento_item_id == OrcamentoItem.id
+            )
+            .filter(
+                OrcamentoItem.orcamento_id == orcamento.id
+            )
+            .count()
+        )
+        
+        # If no items are in a plan, include this orcamento
+        if items_in_plan == 0:
+            filtered_orcamentos.append(orcamento)
+    
+    if not filtered_orcamentos:
         return None
     
     # Create a new treatment plan
@@ -112,7 +135,7 @@ def create_treatment_plan_from_orcamentos(
     db.flush()
     
     # Create plan items from all approved orcamentos
-    for orcamento in orcamentos_aprovados:
+    for orcamento in filtered_orcamentos:
         itens_orcamento = (
             db.query(OrcamentoItem)
             .filter(OrcamentoItem.orcamento_id == orcamento.id)
@@ -313,7 +336,6 @@ def update_item(
 
 
 
-# ... resto das importações ...
 
 def list_consultas(
     db: Session,

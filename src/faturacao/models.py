@@ -1,3 +1,4 @@
+from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 from datetime import datetime
 import enum
 from sqlalchemy import (
@@ -7,6 +8,12 @@ from sqlalchemy.orm import relationship
 from src.database import Base
 from src.comuns.enums import MetodoPagamento
 
+metodopagamento_enum = PG_ENUM(
+    *[m.value for m in MetodoPagamento], 
+    name='metodopagamento',
+    create_type=True,
+    schema=None  # Use your schema name if you have one
+)
 
 class FaturaTipo(enum.Enum):
     consulta = "consulta"
@@ -80,7 +87,7 @@ class ParcelaPagamento(Base):
     data_pagamento  = Column(DateTime(timezone=True), nullable=True)
     estado          = Column(SAEnum(ParcelaEstado), nullable=False, default=ParcelaEstado.pendente)
 
-    metodo_pagamento = Column(SAEnum(MetodoPagamento), nullable=True)
+    metodo_pagamento = Column(metodopagamento_enum, nullable=True)
 
     fatura          = relationship("Fatura", back_populates="parcelas")
 
@@ -92,7 +99,7 @@ class FaturaPagamento(Base):
     fatura_id = Column(Integer, ForeignKey("Faturas.id", ondelete="CASCADE"), nullable=False)
     valor = Column(Numeric(10, 2), nullable=False)
     data_pagamento = Column(DateTime, nullable=False, default=datetime.utcnow)
-    metodo_pagamento = Column(SAEnum(MetodoPagamento), nullable=False)
+    metodo_pagamento = Column(metodopagamento_enum, nullable=True)
     observacoes = Column(String, nullable=True)
     
     # Relationship
