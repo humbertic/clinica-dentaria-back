@@ -261,3 +261,21 @@ def atualizar_orcamento(db: Session, orc_id: int, dados: OrcamentoUpdate) -> Orc
     db.commit()
     db.refresh(orc)
     return orc
+
+def get_orcamento_details(db: Session, orcamento_id: int):
+    """
+    Get detailed orçamento information including all relationships.
+    """
+    
+    orcamento = (
+        db.query(Orcamento)
+        .options(
+            joinedload(Orcamento.paciente),
+            joinedload(Orcamento.entidade),
+            joinedload(Orcamento.itens).joinedload(OrcamentoItem.artigo)
+        )
+        .filter(Orcamento.id == orcamento_id)
+        .first()
+    )
+    
+    return orcamento

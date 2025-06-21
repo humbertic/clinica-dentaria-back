@@ -15,6 +15,8 @@ from src.faturacao.models import (
     FaturaEstado,
     ParcelaEstado,
 )
+from src.caixa.models import CaixaSession, CashierPayment, CaixaStatus
+
 from src.faturacao.schemas import (
     FaturaCreate,
     FaturaItemCreate,
@@ -69,45 +71,57 @@ def create_fatura(
     db: Session,
     payload: FaturaCreate
 ) -> Fatura:
-    # 1) validar paciente
-
+    # 1) Validate paciente
     paciente = db.get(Paciente, payload.paciente_id)
     if not paciente:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Paciente não encontrado")
 
-    # 2) validar campos por tipo e obter origem
+    # 2) Validate fields by type and get origin
     consulta = None
     plano = None
+    
     if payload.tipo == FaturaTipo.consulta.value:
-        # fatura de consulta: CONSULTA_ID obrigatório, PLANO_ID deve ser None
+        # Consulta invoice: CONSULTA_ID required, PLANO_ID must be None
         if payload.consulta_id is None:
             raise HTTPException(400, "Deves enviar consulta_id para fatura de consulta")
         if payload.plano_id is not None:
             raise HTTPException(400, "Fatura de consulta não pode ter plano_id")
+        
         consulta = db.get(Consulta, payload.consulta_id)
         if not consulta:
             raise HTTPException(404, "Consulta não encontrada")
+            
+        # Check if invoice already exists for this consulta
+        existing = db.query(Fatura).filter(
+            Fatura.consulta_id == payload.consulta_id,
+            Fatura.tipo == FaturaTipo.consulta
+        ).first()
+        
+        if existing:
+            # A consulta can only have one invoice, so return it regardless of status
+            return existing
+            
     elif payload.tipo == FaturaTipo.plano.value:
-        # fatura de plano: PLANO_ID obrigatório, CONSULTA_ID deve ser None
+        # Plano invoice: PLANO_ID required, CONSULTA_ID must be None
         if payload.plano_id is None:
             raise HTTPException(400, "Deves enviar plano_id para fatura de plano")
         if payload.consulta_id is not None:
             raise HTTPException(400, "Fatura de plano não pode ter consulta_id")
+        
         plano = db.get(PlanoTratamento, payload.plano_id)
         if not plano:
             raise HTTPException(404, "Plano de tratamento não encontrado")
-    
-
-        # 2.1) evitar geração duplicada de fatura de plano
-        existing = (
-            db.query(Fatura)
-              .filter(Fatura.plano_id == payload.plano_id)
-              .filter()
-              .first()
-        )
+        
+        # Check for existing invoice for this plano, but only return if not canceled
+        existing = db.query(Fatura).filter(
+            Fatura.plano_id == payload.plano_id,
+            Fatura.tipo == FaturaTipo.plano,
+            Fatura.estado != FaturaEstado.cancelada  # Don't consider canceled invoices
+        ).first()
+        
         if existing:
-            # Já existe fatura de plano em aberto, retorna esta
-            print(f"Fatura já existe para o plano {payload.plano_id}, estado: {existing.estado}")
+            # Return existing invoice only if it's not canceled
+            # This allows creating a new invoice if the old one was canceled
             return existing
     else:
         raise HTTPException(
@@ -115,7 +129,7 @@ def create_fatura(
             f"Tipo de fatura inválido: {payload.tipo}"
         )
  
-    # 3) criar fatura inicial
+    # 3) Create initial invoice
     fatura = Fatura(
         paciente_id = payload.paciente_id,
         tipo        = payload.tipo,
@@ -128,15 +142,17 @@ def create_fatura(
     db.commit()
     db.refresh(fatura)
 
-    # 4) gerar itens automaticamente
+    # 4) Generate items automatically
     total = 0
 
     if payload.tipo == FaturaTipo.consulta.value:
+        # For consulta invoices, get items from the consulta
         itens = (
             db.query(ConsultaItem)
             .filter(ConsultaItem.consulta_id == payload.consulta_id)
             .all()
         )
+        
         for ci in itens:
             descricao = ci.artigo.descricao if ci.artigo else f"Procedimento #{ci.id}"
             fi = FaturaItem(
@@ -152,7 +168,8 @@ def create_fatura(
             total += float(ci.total)
 
     elif payload.tipo == FaturaTipo.plano.value:
-        # 1) buscamos o último orçamento aprovado deste paciente
+        # For plano invoices, get items from the plano
+        # First check for an approved budget for this patient
         orc = (
             db.query(Orcamento)
             .filter(Orcamento.paciente_id == payload.paciente_id)
@@ -160,19 +177,21 @@ def create_fatura(
             .order_by(Orcamento.data.desc())
             .first()
         )
+        
         if not orc:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND,
                 "Não existe orçamento aprovado para este paciente"
             )
 
-        # 2) iteramos sobre os OrcamentoItem desse orçamento
+        # Generate items from the plano
         total = 0
         for pi in plano.itens:
-            # obter preço e quantidade inicialmente aprovados
+            # Get price and quantity from the approved budget
             oi = db.get(OrcamentoItem, pi.orcamento_item_id)
             if not oi:
-                continue  # ignora itens sem orcamento associado
+                continue  # Skip items without an associated budget
+                
             descricao = None
             if oi.artigo:
                 descricao = oi.artigo.descricao
@@ -193,15 +212,7 @@ def create_fatura(
             db.add(fi)
             total += qtd * valor_unit
 
-    else:
-        # se alguém invocar com um tipo estranho…
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            f"Tipo de fatura inválido: {payload.tipo}"
-        )
-
-
-    # 5) atualizar total da fatura
+    # 5) Update invoice total
     fatura.total = total
     db.commit()
     db.refresh(fatura)
@@ -307,7 +318,9 @@ def pay_parcela(
     valor_pago: float,
     metodo_pagamento: str,
     data_pagamento: Optional[datetime] = None,
-    observacoes: Optional[str] = None
+    observacoes: Optional[str] = None,
+    session_id: Optional[int] = None,  
+    operador_id: Optional[int] = None  
 ) -> ParcelaPagamento:
     parc = db.get(ParcelaPagamento, parcela_id)
     if not parc:
@@ -317,8 +330,9 @@ def pay_parcela(
         )
 
     # 1) atualizar valor pago, método e data
+    effective_date = data_pagamento or datetime.utcnow()
     parc.valor_pago = valor_pago
-    parc.data_pagamento = data_pagamento or datetime.utcnow()
+    parc.data_pagamento = effective_date
     parc.metodo_pagamento = metodo_pagamento
     
     # 2) determinar estado da parcela
@@ -340,6 +354,29 @@ def pay_parcela(
     else:
         fatura.estado = FaturaEstado.pendente
 
+    # 4) Register in caixa if session_id is provided
+    if session_id and operador_id:
+        
+        # Verify if session exists and is open
+        session = db.get(CaixaSession, session_id)
+        if not session or session.status != CaixaStatus.aberto:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, 
+                "Sessão de caixa inválida ou fechada"
+            )
+            
+        # Create cashier payment record
+        payment = CashierPayment(
+            session_id=session_id,
+            operador_id=operador_id,
+            parcela_id=parcela_id,
+            valor_pago=valor_pago,
+            metodo_pagamento=metodo_pagamento,
+            data_pagamento=effective_date,
+            observacoes=observacoes
+        )
+        db.add(payment)
+
     db.commit()
     db.refresh(parc)
     return parc
@@ -351,7 +388,9 @@ def pay_fatura_direto(
     valor_pago: float,
     metodo_pagamento: MetodoPagamento,
     data_pagamento: Optional[datetime] = None,
-    observacoes: Optional[str] = None
+    observacoes: Optional[str] = None,
+    session_id: Optional[int] = None,  
+    operador_id: Optional[int] = None  
 ) -> Fatura:
     """
     Process a direct payment to an invoice without going through parcelas.
@@ -395,7 +434,7 @@ def pay_fatura_direto(
         fatura_id=fatura_id,
         valor=valor_pago,
         data_pagamento=effective_date,
-        metodo_pagamento=metodo_pagamento,
+        metodo_pagamento=metodo_pagamento.value,  # Use .value to get the string
         observacoes=observacoes
     )
     db.add(pagamento)
@@ -410,6 +449,30 @@ def pay_fatura_direto(
         fatura.estado = FaturaEstado.paga
     elif total_pago > 0:
         fatura.estado = FaturaEstado.parcial
+    
+    # 7) Register in caixa if session_id is provided
+    if session_id and operador_id:
+        from src.caixa.models import CaixaSession, CashierPayment, CaixaStatus
+        
+        # Verify if session exists and is open
+        session = db.get(CaixaSession, session_id)
+        if not session or session.status != CaixaStatus.aberto:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, 
+                "Sessão de caixa inválida ou fechada"
+            )
+            
+        # Create cashier payment record
+        payment = CashierPayment(
+            session_id=session_id,
+            operador_id=operador_id,
+            fatura_id=fatura_id,
+            valor_pago=valor_pago,
+            metodo_pagamento=metodo_pagamento.value,  # Use .value to get the string
+            data_pagamento=effective_date,
+            observacoes=observacoes
+        )
+        db.add(payment)
     
     db.commit()
     db.refresh(fatura)

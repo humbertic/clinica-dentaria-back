@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fatura #{{fatura.id}}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #d32f2f;
+        }
+        
+        .clinic-info {
+            flex: 1;
+        }
+        
+        .clinic-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #d32f2f;
+            margin-bottom: 5px;
+        }
+        
+        .clinic-details {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .logo-area {
+            width: 80px;
+            text-align: center;
+        }
+        
+        .logo {
+            max-width: 70px;
+            max-height: 70px;
+        }
+        
+        .invoice-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #d32f2f;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .invoice-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            gap: 30px;
+        }
+        
+        .patient-section, .invoice-details {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #d32f2f;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #d32f2f;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            width: 120px;
+            flex-shrink: 0;
+        }
+        
+        .info-value {
+            color: #333;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .items-table th {
+            background-color: #d32f2f;
+            color: white;
+            text-align: left;
+            padding: 10px;
+        }
+        
+        .items-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        
+        .payment-section {
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .payment-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .payment-table th {
+            background-color: #d32f2f;
+            color: white;
+            text-align: left;
+            padding: 10px;
+        }
+        
+        .payment-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+    <!-- ░░ Cabeçalho ░░ -->
+    <div class="header">
+        <div class="clinic-info">
+            <div class="clinic-name">{{ clinica.nome }}</div>
+            <div class="clinic-details">
+                {{ clinica.morada }}<br>
+                Tel: {{ clinica.telefone }}<br>
+                Email: {{ clinica.email }}<br>
+                NIF: {{ clinica.nif }}
+            </div>
+        </div>
+
+        <div class="logo-area">
+            {% if logo_path %}
+                <img src="{{ logo_path }}" class="logo" alt="{{ clinica.nome }}">
+            {% else %}
+                <div>LOGO</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ░░ Título ░░ -->
+    <div class="invoice-title">FATURA #{{ fatura.id }}</div>
+
+    <!-- ░░ Dados do paciente + detalhes da fatura ░░ -->
+    <div class="invoice-info">
+
+        <div class="patient-section">
+            <div class="section-title">Dados do Paciente</div>
+
+            <div class="info-row"><div class="info-label">Nome:</div><div class="info-value">{{ paciente.nome }}</div></div>
+            <div class="info-row"><div class="info-label">NIF:</div><div class="info-value">{{ paciente.nif }}</div></div>
+            <div class="info-row"><div class="info-label">Morada:</div><div class="info-value">{{ paciente.morada }}</div></div>
+            <div class="info-row"><div class="info-label">Telefone:</div><div class="info-value">{{ paciente.telefone }}</div></div>
+            <div class="info-row"><div class="info-label">Email:</div><div class="info-value">{{ paciente.email }}</div></div>
+        </div>
+
+        <div class="invoice-details">
+            <div class="section-title">Detalhes da Fatura</div>
+
+            <div class="info-row"><div class="info-label">Data Emissão:</div><div class="info-value">{{ fatura.data_emissao }}</div></div>
+            <div class="info-row"><div class="info-label">Tipo:</div><div class="info-value">{{ fatura.tipo }}</div></div>
+            <div class="info-row"><div class="info-label">Estado:</div><div class="info-value">{{ fatura.estado }}</div></div>
+
+            {% if consulta %}
+            <div class="info-row"><div class="info-label">Consulta:</div>
+                <div class="info-value">#{{ consulta.id }} – {{ consulta.data_inicio }}</div>
+            </div>
+            {% endif %}
+
+            {% if plano %}
+            <div class="info-row"><div class="info-label">Plano:</div>
+                <div class="info-value">#{{ plano.id }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ░░ Tabela de itens ░░ -->
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Descrição</th>
+                <th style="width: 10%;">Qtd</th>
+                <th style="width: 15%;">Preço Unit.</th>
+                <th style="width: 15%;">Total</th>
+                <th style="width: 20%;">Dente</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in fatura.itens %}
+            <tr>
+                <td>
+                    {{ item.descricao }}
+                </td>
+                <td>{{ item.quantidade }}</td>
+                <td>{{ item.preco_unitario|cve }}</td>
+                <td>{{ item.total|cve }}</td>
+                <td>{{ item.numero_dente or '' }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="3" class="text-right">TOTAL GERAL:</td>
+                <td>{{ fatura.total|cve }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ░░ Parcelas (opcional) ░░ -->
+    {% if fatura.parcelas %}
+    <div class="payment-section">
+        <div class="section-title">Informações de Pagamento</div>
+        <table class="payment-table">
+            <thead>
+                <tr>
+                    <th>Parcela</th>
+                    <th>Valor Planeado</th>
+                    <th>Vencimento</th>
+                    <th>Valor Pago</th>
+                    <th>Data Pagamento</th>
+                    <th>Estado</th>
+                    <th>Método</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for parcela in fatura.parcelas %}
+                <tr>
+                    <td>{{ parcela.numero }}</td>
+                    <td>{{ parcela.valor_planejado|cve }}</td>
+                    <td>{{ parcela.data_vencimento }}</td>
+                    <td>
+                        {% if parcela.valor_pago %}
+                            {{ parcela.valor_pago|cve }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ parcela.data_pagamento or '—' }}</td>
+                    <td>{{ parcela.estado }}</td>
+                    <td>{{ parcela.metodo_pagamento or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- ░░ Rodapé ░░ -->
+    <div class="footer">
+        <div>{{ clinica.nome }}</div>
+        <div>{{ clinica.morada }} | Tel: {{ clinica.telefone }} | Email: {{ clinica.email }}</div>
+        <div>NIF: {{ clinica.nif }}</div>
+        <div>Documento gerado em {{ data_geracao }}</div>
+        <div>Esta fatura foi processada electronicamente e é válida sem assinatura</div>
+    </div>
+
+</div>
+</body>
+</html>

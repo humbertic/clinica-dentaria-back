@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Orçamento #{{orcamento.id}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background: #fff;
+        }
+        
+        .document {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 15mm;
+            background: white;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2c5aa0;
+        }
+        
+        .clinic-info {
+            flex: 1;
+        }
+        
+        .clinic-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 5px;
+        }
+        
+        .clinic-details {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.3;
+        }
+        
+        .logo-area {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+        }
+        
+        .logo {
+            max-width: 70px;
+            max-height: 70px;
+        }
+        
+        .document-title {
+            text-align: center;
+            background: #f0f4f8;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c5aa0;
+            text-transform: uppercase;
+        }
+        
+        .disclaimer {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .patient-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+        }
+        
+        .patient-details, .estimate-details {
+            flex: 1;
+        }
+        
+        .patient-details {
+            margin-right: 30px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .info-value {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 11px;
+        }
+        
+        .items-table th {
+            background: #2c5aa0;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #2c5aa0;
+        }
+        
+        .items-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        
+        .items-table tbody tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .items-table tbody tr:hover {
+            background: #f0f4f8;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .font-bold {
+            font-weight: bold;
+        }
+        
+        .totals-section {
+            margin-top: 20px;
+            border: 2px solid #2c5aa0;
+        }
+        
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            font-size: 13px;
+        }
+        
+        .totals-table .total-label {
+            background: #f0f4f8;
+            font-weight: bold;
+            color: #2c5aa0;
+            width: 70%;
+        }
+        
+        .totals-table .total-value {
+            text-align: right;
+            font-weight: bold;
+            background: white;
+        }
+        
+        .totals-table .grand-total {
+            background: #2c5aa0;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-box {
+            width: 45%;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #333;
+            margin-top: 50px;
+            padding-top: 5px;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            font-size: 9px;
+            color: #666;
+            line-height: 1.3;
+        }
+        
+        .footer-notes {
+            margin-bottom: 10px;
+        }
+        
+        .footer-info {
+            text-align: center;
+            font-size: 8px;
+        }
+        
+        .teeth-info {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .price {
+            font-weight: bold;
+            color: #2c5aa0;
+        }
+        
+        @media print {
+            .document {
+                margin: 0;
+                padding: 10mm;
+            }
+            
+            body {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="document">
+
+    <!-- ░░ Cabeçalho ░░ -->
+    <div class="header">
+        <div class="clinic-info">
+            <div class="clinic-name">{{ clinica.nome }}</div>
+            <div class="clinic-details">
+                {{ clinica.morada }}<br>
+                {{ clinica.cidade }}<br>
+                Tel: {{ clinica.telefone }}<br>
+                Email: {{ clinica.email }}
+            </div>
+        </div>
+        <div class="logo-area">
+            {% if logo_path %}
+                <img src="file://{{ logo_path }}" class="logo" alt="{{ clinica.nome }}">
+            {% else %}
+                <div style="color:#ccc;font-size:10px;">LOGO</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="disclaimer">ESTE DOCUMENTO NÃO SERVE DE FATURA</div>
+    <div class="document-title">Prescrição / Orçamento Estomatológico</div>
+
+    <!-- ░░ Paciente + detalhes ░░ -->
+    <div class="patient-info">
+        <div class="patient-details">
+            <div class="info-label">Nome do Paciente:</div>
+            <div class="info-value font-bold">{{ paciente.nome }}</div>
+
+            <div class="info-label">Categoria do Beneficiário:</div>
+            <div class="info-value">{{ entidade.nome }}</div>
+
+            <div class="info-label">Nº do Segurado:</div>
+            <div class="info-value">{{ paciente.numero_documento }}</div>
+        </div>
+
+        <div class="estimate-details">
+            <div class="info-label">Nº de Identificação:</div>
+            <div class="info-value font-bold">{{ orcamento.id }}</div>
+
+            <div class="info-label">Data:</div>
+            <div class="info-value">{{ orcamento.data }}</div>
+
+            <div class="info-label">Estado:</div>
+            <div class="info-value">{{ orcamento.estado }}</div>
+        </div>
+    </div>
+
+    <!-- ░░ Tabela de actos ░░ -->
+    <table class="items-table">
+        <thead>
+        <tr>
+            <th style="width:8%;">Código</th>
+            <th style="width:35%;">Designação dos Actos</th>
+            <th style="width:10%;">Dentes</th>
+            <th style="width:12%;">Preço Unit.</th>
+            <th colspan="2" class="text-center">Comparticipações</th>
+        </tr>
+        <tr>
+            <th></th><th></th><th></th><th></th>
+            <th style="width:12%;">Beneficiário</th>
+            <th style="width:12%;">INPS</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for item in orcamento.itens %}
+            <tr>
+                <td class="text-center">{{ item.artigo.codigo }}</td>
+                <td>{{ item.artigo.nome }}</td>
+                <td class="text-center">
+                    {% if item.numero_dente %}
+                        {{ item.numero_dente }}
+                        {% if item.face %}
+                            <div class="teeth-info">({{ item.face|join(' / ') }})</div>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td class="text-right price">{{ item.preco_paciente|cve }}</td>
+                <td class="text-right price">{{ item.subtotal_paciente|cve }}</td>
+                <td class="text-right price">{{ item.subtotal_entidade|cve }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- ░░ Totais ░░ -->
+    <div class="totals-section">
+        <table class="totals-table">
+            <tr>
+                <td class="total-label">Total Orçamento:</td>
+                <td class="total-value price">{{ orcamento.total_paciente|cve }}</td>
+            </tr>
+            <tr>
+                <td class="total-label">Total Tratamentos Dentários:</td>
+                <td class="total-value price">{{ total_tratamentos|cve }}</td>
+            </tr>
+            <tr class="grand-total">
+                <td>Total Próteses Dentárias:</td>
+                <td class="text-right">{{ total_proteses|cve }}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if orcamento.observacoes %}
+    <div style="margin:20px 0;padding:15px;background:#f9f9f9;border-left:4px solid #2c5aa0;">
+        <div class="info-label">Observações:</div>
+        <div>{{ orcamento.observacoes }}</div>
+    </div>
+    {% endif %}
+
+    <div class="signature-section">
+        <div class="signature-box">
+            <div class="signature-line">(nome legível, assinatura, carimbo e nº de cédula)</div>
+        </div>
+    </div>
+
+    <!-- ░░ Rodapé ░░ -->
+    <div class="footer">
+        <div class="footer-notes">
+            <strong>As linhas não preenchidas devem ser inutilizadas</strong><br>
+            No espaço para categoria do beneficiário colocar: TCO, TCP ou AP
+        </div>
+        <div class="footer-info">
+            <p>Processado pelo programa GT clinic licenciado para {{ clinica.nome }}</p>
+            <p>Documento gerado em {{ data_geracao }}</p>
+            <p>{{ clinica.nome }} &copy; 2025</p>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

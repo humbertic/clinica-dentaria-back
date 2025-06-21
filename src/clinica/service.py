@@ -142,3 +142,12 @@ def listar_configuracoes(db: Session, clinica_id: int):
 
 def listar_emails(db: Session, clinica_id: int):
     return db.query(models.ClinicaEmail).filter_by(clinica_id=clinica_id).all()
+
+
+def get_clinica_details(db: Session):
+    """
+    Get basic clinic information from the database.
+    """
+    
+    clinica = db.query(models.Clinica).first()
+    return clinica

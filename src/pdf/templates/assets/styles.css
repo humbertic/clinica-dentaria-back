@@ -1,0 +1,12 @@
+@page {
+    size: A4;
+    margin: 15mm;
+}
+
+@media print {
+    body {
+        font-size: 11px;
+    }
+}
+
+/* Add any additional styles here */

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.params import Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from src.database import SessionLocal
 from src.utilizadores.dependencies import get_current_user
@@ -77,6 +78,7 @@ def definir_parcelas(
 def pagar_parcela(
     parcela_id: int,
     pagamento: schemas.ParcelaPagamentoRequest,
+    session_id: Optional[int] = Query(None, description="ID da sessão de pagamento"),
     db: Session = Depends(get_db),
     utilizador: Utilizador = Depends(get_current_user),
 ):
@@ -86,7 +88,9 @@ def pagar_parcela(
         valor_pago=pagamento.valor_pago,
         metodo_pagamento=pagamento.metodo_pagamento,
         data_pagamento=pagamento.data_pagamento,
-        observacoes=pagamento.observacoes if hasattr(pagamento, 'observacoes') else None
+        observacoes=pagamento.observacoes if hasattr(pagamento, 'observacoes') else None,
+        session_id=session_id,
+        operador_id= utilizador.id if session_id else None
     )
 
 
@@ -94,6 +98,7 @@ def pagar_parcela(
 def pagar_fatura_direto(
     fatura_id: int,
     pagamento: schemas.ParcelaPagamentoRequest,
+    session_id: Optional[int] = Query(None, description="ID da sessão de pagamento"),
     db: Session = Depends(get_db),
     utilizador: Utilizador = Depends(get_current_user),
 ):
@@ -106,5 +111,7 @@ def pagar_fatura_direto(
         valor_pago=pagamento.valor_pago,
         metodo_pagamento=pagamento.metodo_pagamento,
         data_pagamento=pagamento.data_pagamento,
-        observacoes=pagamento.observacoes if hasattr(pagamento, 'observacoes') else None
+        observacoes=pagamento.observacoes if hasattr(pagamento, 'observacoes') else None,
+        session_id=session_id,
+        operador_id= utilizador.id if session_id else None
     )

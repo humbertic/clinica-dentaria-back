@@ -46,3 +46,10 @@ uvicorn==0.34.1
 uvloop==0.21.0
 watchfiles==1.0.5
 websockets==15.0.1
+cffi==1.17.1
+cssselect2==0.8.0
+fonttools==4.58.4
+pycparser==2.22
+pyphen==0.17.2
+tinycss2==1.4.0
+weasyprint==65.1
