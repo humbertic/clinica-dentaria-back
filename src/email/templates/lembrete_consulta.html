@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Lembrete da sua consulta{% endblock %}
+
+{% block content %}
+<h2 style="margin-top:0;font-size:20px;color:#2c5aa0;">
+  Lembrete da sua consulta
+</h2>
+
+<p>Olá <strong>{{ paciente.nome }}</strong>,</p>
+
+<p>
+Queremos lembrá-lo(a) da sua próxima consulta agendada na
+<strong>{{ clinica.nome }}</strong>.
+</p>
+
+<table style="width:100%;border-collapse:collapse;font-size:14px;margin:24px 0">
+  <tr>
+    <td style="padding:8px 0;color:#7d8a9a">Data e hora:</td>
+    <td style="padding:8px 0;text-align:right;font-weight:600">
+      {{ marcacao.data_hora_inicio|dt }}
+    </td>
+  </tr>
+  {% if medico.nome %}
+  <tr style="border-top:1px solid #e5e9f0">
+    <td style="padding:8px 0;color:#7d8a9a">Profissional:</td>
+    <td style="padding:8px 0;text-align:right;font-weight:600">
+      Dr(a). {{ medico.nome }}
+    </td>
+  </tr>
+  {% endif %}
+  {% if marcacao.observacoes %}
+  <tr style="border-top:1px solid #e5e9f0">
+    <td style="padding:8px 0;color:#7d8a9a">Serviço:</td>
+    <td style="padding:8px 0;text-align:right;">{{ marcacao.observacoes }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+<p style="margin-bottom:32px">
+Se precisar remarcar ou tiver alguma dúvida, por favor responda a este e-mail ou
+contacte-nos pelos canais habituais.
+</p>
+
+<p>Até breve!<br>
+Equipa <strong>{{ clinica.nome }}</strong></p>
+{% endblock %}

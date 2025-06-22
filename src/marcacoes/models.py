@@ -9,9 +9,9 @@ class Marcacao(Base):
 
     id           = Column(Integer, primary_key=True, index=True)
     paciente_id  = Column(Integer, ForeignKey("Paciente.id"), nullable=False)
-    medico_id    = Column(Integer, ForeignKey("Utilizador.id"), nullable=False)  # Corrigido
+    medico_id    = Column(Integer, ForeignKey("Utilizador.id"), nullable=False)  
     clinic_id    = Column(Integer, ForeignKey("Clinica.id"), nullable=False)
-    agendada_por = Column(Integer, ForeignKey("Utilizador.id"), nullable=False)  # Corrigido
+    agendada_por = Column(Integer, ForeignKey("Utilizador.id"), nullable=False)  
 
     entidade_id  = Column(Integer, ForeignKey("Entidades.id"), nullable=False)
     observacoes  = Column(Text, nullable=True)
@@ -26,7 +26,7 @@ class Marcacao(Base):
                           onupdate=func.now(), nullable=False)
 
     paciente     = relationship("Paciente")
-    medico       = relationship("Utilizador", foreign_keys=[medico_id])      # Corrigido
+    medico       = relationship("Utilizador", foreign_keys=[medico_id])      
     clinic       = relationship("Clinica")
-    agendador    = relationship("Utilizador", foreign_keys=[agendada_por])  # Corrigido
+    agendador    = relationship("Utilizador", foreign_keys=[agendada_por])  
     entidade     = relationship("Entidade")

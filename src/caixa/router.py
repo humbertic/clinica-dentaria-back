@@ -37,7 +37,8 @@ def get_open_session(db: Session = Depends(get_db)):
 def open_session(payload: schemas.CaixaSessionCreate,
                  db: Session = Depends(get_db),
                  user: Utilizador = Depends(frontoffice_only)):
-    return service.open_session(db, payload)
+    # Pass the authenticated user's ID to the service
+    return service.open_session(db, payload, user.id)
 
 @router.get("/{session_id}/pending")
 def get_pending(session_id: int, db: Session = Depends(get_db),

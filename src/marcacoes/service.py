@@ -135,3 +135,4 @@ def delete_marcacao(
         )
     db.delete(m)
     db.commit()
+

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}{% endblock %}</title>
+
+<!-- Google Font (fallback para sans-serif) -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet">
+
+<style>
+  /* Reset básico */
+  body,table,td,p{margin:0;padding:0;font-family:'Inter',Arial,sans-serif;}
+  img{border:0;display:block;max-width:100%}
+
+  /* Fundo geral com gradiente suave */
+  body{
+    background:#f1f4f8;
+    background:linear-gradient(135deg,#f1f4f8 0%,#eaf0f7 50%,#f1f4f8 100%);
+    -webkit-text-size-adjust:none;
+    line-height:1.5;
+    color:#444;
+  }
+
+  /* “Cartão” central */
+  .wrapper{
+    max-width:600px;
+    margin:0 auto;
+    padding:32px 16px;
+  }
+  .card{
+    background:#ffffff;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,.05);
+    overflow:hidden;
+  }
+
+  /* Cabeçalho */
+  .header{
+    background:#2c5aa0;
+    color:#ffffff;
+    text-align:center;
+    padding:32px 24px;
+  }
+  h1{font-size:24px;font-weight:600;margin:0}
+
+  /* Conteúdo */
+  .content{padding:32px 24px;font-size:15px}
+
+  /* Rodapé */
+  .footer{
+    background:#f7f9fb;
+    text-align:center;
+    padding:24px 20px;
+    font-size:12px;
+    color:#7d8a9a;
+  }
+
+  a{color:#2c5aa0;text-decoration:none}
+</style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="card">
+
+      <div class="header">
+        {% block header %}
+        <h1>{{ clinica.nome|default('Clínica Dentária') }}</h1>
+        {% endblock %}
+      </div>
+
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
+
+      <div class="footer">
+        {% block footer %}
+          <p>{{ clinica.morada|default('') }}</p>
+          {% if clinica.telefone %}<p>Tel: {{ clinica.telefone }}</p>{% endif %}
+          {% if clinica.email_envio %}<p>{{ clinica.email_envio }}</p>{% endif %}
+        {% endblock %}
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

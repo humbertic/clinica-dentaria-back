@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Orçamento #{{ orcamento.id }}{% endblock %}
+
+{% block content %}
+
+<h2 style="margin-top:0;font-size:20px;color:#2c5aa0;">Orçamento #{{ orcamento.id }}</h2>
+
+<p>Olá <strong>{{ paciente.nome|default('Paciente') }}</strong>,</p>
+
+<p>
+Segue, em anexo, o orçamento solicitado para os seus procedimentos dentários na
+{{ clinica.nome|default('nossa clínica') }}.
+</p>
+
+<table style="width:100%;border-collapse:collapse;font-size:14px;margin:24px 0">
+  <tr>
+    <td style="padding:8px 0;color:#7d8a9a">Data de emissão:</td>
+    <td style="padding:8px 0;text-align:right;font-weight:600">
+      {{ orcamento.data|default('') }}
+    </td>
+  </tr>
+  <tr style="border-top:1px solid #e5e9f0">
+    <td style="padding:8px 0;color:#7d8a9a">Valor total (Paciente):</td>
+    <td style="padding:8px 0;text-align:right;font-weight:600">
+      {{ orcamento.total_paciente }}
+    </td>
+  </tr>
+  <tr style="border-top:1px solid #e5e9f0">
+    <td style="padding:8px 0;color:#7d8a9a">Valor total (Entidade):</td>
+    <td style="padding:8px 0;text-align:right;font-weight:600">
+      {{ orcamento.total_entidade }}
+    </td>
+  </tr>
+  <tr style="border-top:1px solid #e5e9f0">
+    <td style="padding:8px 0;color:#7d8a9a">Estado:</td>
+    <td style="padding:8px 0;text-align:right;font-weight:600">
+      {{ orcamento.estado.value }}
+    </td>
+  </tr>
+</table>
+
+{% if orcamento.observacoes %}
+<p style="margin-bottom:24px">
+<strong>Observações:</strong> {{ orcamento.observacoes }}
+</p>
+{% endif %}
+
+<p style="margin-bottom:32px">
+Este orçamento é válido por <strong>30 dias</strong> a partir da data de emissão.
+Se tiver dúvidas ou desejar agendar o tratamento, responda a este e-mail ou
+contacte-nos pelos nossos canais habituais.
+</p>
+
+<p>Atenciosamente,<br>
+Equipa <strong>{{ clinica.nome|default('Clínica Dentária') }}</strong></p>
+
+{% endblock %}

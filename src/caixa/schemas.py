@@ -18,7 +18,7 @@ class PaymentSummary(BaseModel):
 
 
 class CaixaSessionBase(BaseModel):
-    operador_id:   int     = Field(..., description="ID do utilizador (front-office)")
+    operador_id:   Optional[int] = None 
     valor_inicial: float   = Field(..., description="Valor inicial em caixa")
 
 class CaixaSessionCreate(CaixaSessionBase):

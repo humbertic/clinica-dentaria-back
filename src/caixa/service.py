@@ -94,9 +94,22 @@ def fetch_open_session(db: Session) -> Optional[dict]:
             "history": payment_details
         }
     }
-
-def open_session(db: Session, payload: CaixaSessionCreate) -> CaixaSession:
-    session = CaixaSession(**payload.dict())
+def open_session(db: Session, payload: CaixaSessionCreate, operador_id: int) -> CaixaSession:
+    # Check if there's already an open session
+    existing = fetch_open_session(db)
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Já existe uma sessão de caixa aberta"
+        )
+    
+    # Create a new session with the authenticated user as the operator
+    session_data = payload.dict()
+    session_data["operador_id"] = operador_id  # Use the authenticated user's ID
+    session_data["data_inicio"] = datetime.now()
+    session_data["status"] = CaixaStatus.aberto
+    
+    session = CaixaSession(**session_data)
     db.add(session)
     db.commit()
     db.refresh(session)

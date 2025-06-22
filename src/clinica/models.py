@@ -34,10 +34,13 @@ class ClinicaEmail(Base):
     id = Column(Integer, primary_key=True)
     clinica_id = Column(Integer, ForeignKey("Clinica.id"))
     remetente = Column(String(100))
+    nome_remetente = Column(String(100), nullable=True)
     smtp_host = Column(String(100))
     smtp_porta = Column(Integer)
     utilizador_smtp = Column(String(100))
     password_smtp = Column(Text)
+    usar_tls = Column(Boolean, default=True)  
+    usar_ssl = Column(Boolean, default=False)  
     ativo = Column(Boolean, default=True)
 
     clinica = relationship("Clinica", back_populates="emails")
