@@ -8,7 +8,7 @@ from src.utilizadores.dependencies import get_current_user  # Use this instead o
 from src.utilizadores.models import Utilizador
 
 from src.relatorios.service import (
-    get_revenue, get_top_services, get_cash_shifts,
+    get_cash_shift_range, get_revenue, get_top_services, get_cash_shifts,
     get_overdue_installments, get_stock_critical, get_productivity
 )
 from src.relatorios.schemas import (
@@ -74,6 +74,17 @@ def stock_critical(
     current_user: Utilizador = Depends(get_current_user)
 ):
     return get_stock_critical(db)
+
+
+@router.get("/cash-shift-range")
+def cash_shift_range(
+    start: date,
+    end: date,
+    db: Session = Depends(get_db),
+    current_user: Utilizador = Depends(get_current_user)
+):
+    return get_cash_shift_range(db, start, end)
+
 
 # ----------------------------------------------------------------------
 @router.get("/productivity", response_model=List[ProductivityClinicalOut])
