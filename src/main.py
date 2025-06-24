@@ -18,6 +18,8 @@ from src.faturacao.router import router as faturacao_router
 from src.caixa.router import router as caixa_router
 from src.pdf.router import router as pdf_router
 from src.email.router import router as email_router
+from src.mensagens.router import router as mensagens_router
+from src.relatorios.router import router as relatorios_router
 
 
 
@@ -70,6 +72,8 @@ app.include_router(faturacao_router)
 app.include_router(caixa_router)
 app.include_router(pdf_router)
 app.include_router(email_router)
+app.include_router(mensagens_router)
+app.include_router(relatorios_router)
 
 
 

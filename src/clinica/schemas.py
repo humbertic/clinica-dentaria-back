@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 # -------- CLINICA --------
@@ -8,12 +9,20 @@ class ClinicaBase(BaseModel):
     clinica_pai_id: int | None = None
     partilha_dados: bool = False
 
+class ClinicaParentInfo(BaseModel):
+    id:   int
+    nome: str
+
+    class Config:
+        orm_mode = True
+
 class ClinicaCreate(ClinicaBase):
     pass
 
 class ClinicaResponse(ClinicaBase):
     id: int
     criado_por_id: int | None = None
+    clinica_pai:  Optional[ClinicaParentInfo]
 
     class Config:
         from_attributes = True

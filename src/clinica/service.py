@@ -1,7 +1,7 @@
 from src.utilizadores.models import Utilizador, UtilizadorClinica
 from src.utilizadores.utils import is_master_admin
 from src.auditoria.utils import registrar_auditoria
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from src.clinica import models, schemas
 
 def criar_clinica(db: Session, dados: schemas.ClinicaCreate, criado_por_id: int):
@@ -124,14 +124,19 @@ def remover_email(db: Session, email_id: int, user_id: int):
     return email
 
 def listar_clinicas(db: Session, utilizador_atual: Utilizador):
+    query = db.query(models.Clinica).options(
+        selectinload(models.Clinica.clinica_pai)   
+    )
     if is_master_admin(utilizador_atual):
-        return db.query(models.Clinica).filter(models.Clinica.criado_por_id == utilizador_atual.id).all()
+        return query.filter(
+            models.Clinica.criado_por_id == utilizador_atual.id
+        ).all()
     else:
         return (
-            db.query(models.Clinica)
-            .join(UtilizadorClinica, UtilizadorClinica.clinica_id == models.Clinica.id)
-            .filter(UtilizadorClinica.utilizador_id == utilizador_atual.id)
-            .all()
+            query.join(UtilizadorClinica,
+                       UtilizadorClinica.clinica_id == models.Clinica.id)
+                 .filter(UtilizadorClinica.utilizador_id == utilizador_atual.id)
+                 .all()
         )
         
 def obter_clinica_por_id(db: Session, clinica_id: int, utilizador_atual):
