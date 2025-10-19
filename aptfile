@@ -2,9 +2,7 @@ libgobject-2.0-0
 libpango-1.0-0
 libcairo2
 libfontconfig1
-libgdk-pixbuf2.0-0
-libgirepository-1.0-1
+libgdk-pixbuf-xlib-2.0-0
 libxml2
 libxslt1.1
-libffi7
-shared-mime-info
+libffi8
