@@ -22,7 +22,7 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Expose port
-EXPOSE 8080
+EXPOSE $PORT
 
-# Start server only
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Start server only - use shell form to expand environment variables
+CMD uvicorn src.main:app --host 0.0.0.0 --port $PORT
