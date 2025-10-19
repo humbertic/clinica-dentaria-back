@@ -21,5 +21,5 @@ RUN pip install -r requirements.txt
 # Copy application code
 COPY . .
 
-# Run migrations and start server
-CMD alembic stamp head && uvicorn src.main:app --host 0.0.0.0 --port $PORT
+# Start server without migrations for now
+CMD uvicorn src.main:app --host 0.0.0.0 --port $PORT
