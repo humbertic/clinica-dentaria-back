@@ -21,5 +21,8 @@ RUN pip install -r requirements.txt
 # Copy application code
 COPY . .
 
-# Start server without migrations for now
-CMD uvicorn src.main:app --host 0.0.0.0 --port $PORT
+# Expose port
+EXPOSE 8080
+
+# Start server only
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
