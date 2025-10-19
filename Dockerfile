@@ -24,5 +24,5 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Start server only - use shell form to expand environment variables
-CMD uvicorn src.main:app --host 0.0.0.0 --port $PORT
+# Start server on port 8000
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
